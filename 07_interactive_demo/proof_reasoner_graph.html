@@ -1,0 +1,3151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Odor Graph Reasoner — Real-Time KEGG + Prolog</title>
+<style>
+:root {
+  --bg-0: #0b0f14;
+  --bg-1: #0f172a;
+  --panel: #121a23;
+  --panel-2: #182231;
+  --ink: #e6edf3;
+  --muted: #8b98a5;
+  --line: #2a3441;
+  --accent: #ff7a59;
+  --accent-2: #2dd4bf;
+  --accent-3: #f6c453;
+  --good: #7cda7b;
+  --warn: #f59f0b;
+  --bad: #f87171;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Space Grotesk', 'Avenir Next', 'Segoe UI', sans-serif;
+  background: radial-gradient(1200px 700px at 10% -10%, #1f2937 0%, transparent 60%),
+              radial-gradient(1000px 600px at 90% -10%, #0b3b3a 0%, transparent 55%),
+              linear-gradient(140deg, #0b0f14 0%, #0f172a 65%, #111827 100%);
+  color: var(--ink);
+  min-height: 100vh;
+}
+
+.mono { font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', monospace; }
+
+.shell { min-height: 100vh; display: flex; flex-direction: column; }
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(10, 15, 21, 0.6);
+  backdrop-filter: blur(8px);
+}
+
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: conic-gradient(from 120deg, var(--accent), var(--accent-2), var(--accent-3), var(--accent));
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
+}
+.brand h1 { font-size: 16px; letter-spacing: 0.4px; }
+.brand p { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.top-stats { display: flex; gap: 10px; flex-wrap: wrap; }
+.stat-pill {
+  border: 1px solid var(--line);
+  background: rgba(18, 26, 35, 0.8);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.stat-pill .num { color: var(--accent-2); font-weight: 700; margin-left: 4px; }
+
+.workspace {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 18px;
+  padding: 18px;
+  flex: 1;
+}
+
+.panel { display: flex; flex-direction: column; gap: 16px; overflow-y: auto; max-height: calc(100vh - 90px); }
+
+.card {
+  background: rgba(18, 26, 35, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 10px 30px rgba(5, 10, 20, 0.35);
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+.file-grid { display: grid; gap: 6px; }
+.file-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; }
+.file-row label { font-size: 11px; color: #cbd5e1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.file-input { display: none; }
+.file-btn {
+  font-size: 10px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+.file-btn:hover { border-color: var(--accent-2); color: var(--accent-2); }
+
+.status { font-size: 10px; padding: 2px 8px; border-radius: 999px; border: 1px solid transparent; }
+.status-loaded { background: rgba(34, 197, 94, 0.15); color: #86efac; border-color: rgba(34, 197, 94, 0.4); }
+.status-pending { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border-color: rgba(148, 163, 184, 0.3); }
+.status-loading { background: rgba(245, 158, 11, 0.15); color: #fcd34d; border-color: rgba(245, 158, 11, 0.4); }
+.status-error { background: rgba(248, 113, 113, 0.15); color: #fca5a5; border-color: rgba(248, 113, 113, 0.4); }
+
+/* Graph settings */
+.settings-grid { display: grid; gap: 8px; margin-top: 10px; }
+.slider-row { display: flex; align-items: center; gap: 10px; }
+.slider-row label { font-size: 11px; color: #cbd5e1; min-width: 80px; }
+.slider-row input[type=range] { flex: 1; accent-color: var(--accent-2); }
+.slider-row .slider-val { font-size: 11px; color: var(--accent-2); font-weight: 700; min-width: 20px; text-align: center; }
+.toggle-row { display: flex; align-items: center; gap: 10px; }
+.toggle-row label { font-size: 11px; color: #cbd5e1; }
+.toggle-row input[type=checkbox] { accent-color: var(--accent-2); }
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--line);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+  display: none;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  border-radius: 3px;
+  width: 0%;
+  transition: width 0.3s;
+}
+
+/* Constraint builder */
+.constraint-row { display: grid; grid-template-columns: 80px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+.constraint-row label { font-size: 11px; color: #cbd5e1; }
+.constraint-select, .constraint-input {
+  width: 100%;
+  background: #0b1320;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: 'IBM Plex Mono', 'Menlo', monospace;
+  font-size: 12px;
+  padding: 6px 8px;
+  border-radius: 8px;
+}
+.constraint-select:focus, .constraint-input:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255, 122, 89, 0.2);
+}
+
+.query-input {
+  width: 100%;
+  background: #0b1320;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: 'IBM Plex Mono', 'Menlo', monospace;
+  font-size: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  min-height: 90px;
+  resize: vertical;
+}
+.query-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255, 122, 89, 0.2); }
+
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.btn {
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--ink);
+}
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #0b0f14; }
+.btn-primary:hover:not(:disabled) { filter: brightness(1.05); }
+.btn-ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.btn-accent2 { background: var(--accent-2); border-color: var(--accent-2); color: #0b0f14; }
+.btn-accent2:hover:not(:disabled) { filter: brightness(1.05); }
+
+.example-group { margin-bottom: 10px; }
+.example-group h4 { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.example-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  font-size: 11px;
+  border-radius: 10px;
+  border: 1px dashed var(--line);
+  background: rgba(15, 23, 42, 0.6);
+  color: #e2e8f0;
+  cursor: pointer;
+  font-family: 'IBM Plex Mono', 'Menlo', monospace;
+}
+.example-btn:hover { border-color: var(--accent-2); color: var(--accent-2); }
+
+.canvas {
+  background: rgba(12, 18, 28, 0.6);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 18px;
+  overflow-y: auto;
+  max-height: calc(100vh - 90px);
+  position: relative;
+}
+
+.empty {
+  text-align: center;
+  padding: 80px 16px;
+  color: var(--muted);
+}
+.empty h3 { font-size: 18px; margin-bottom: 8px; color: var(--ink); }
+.empty p { font-size: 12px; margin-top: 6px; }
+
+.section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.section-title h2 { font-size: 14px; }
+.section-title .pill { font-size: 10px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+
+.result-block { margin-bottom: 22px; }
+.result-grid { display: grid; gap: 12px; }
+.result-card {
+  border: 1px solid var(--line);
+  background: rgba(18, 26, 35, 0.85);
+  border-radius: 16px;
+  padding: 12px;
+}
+.result-card h4 { font-size: 12px; margin-bottom: 6px; }
+
+.rule-fol { font-size: 12px; line-height: 1.5; }
+.rule-meta { font-size: 10px; color: var(--muted); margin-top: 6px; }
+
+.kw { color: var(--accent); font-weight: 700; }
+.kw-soft { color: var(--accent-3); font-weight: 700; }
+.odor { color: #7dd3fc; }
+.cpd { color: #7dd3fc; }
+.ec { color: #facc15; }
+.rxn { color: #a78bfa; }
+
+.proof-block { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 10px; }
+.proof-path { border: 1px solid var(--line); border-radius: 12px; padding: 10px; margin-bottom: 8px; background: rgba(10, 15, 21, 0.6); }
+.proof-path-header { font-size: 10px; color: var(--muted); margin-bottom: 6px; }
+.proof-step { display: flex; gap: 6px; font-size: 11px; margin-bottom: 4px; align-items: center; flex-wrap: wrap; }
+.proof-step .arrow { color: #475569; }
+
+/* Pathway visualization */
+.path-viz { display: flex; flex-direction: column; gap: 8px; margin: 8px 0; }
+.path-step-row { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.path-node {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  border: 1px solid var(--line);
+  min-width: 80px;
+  text-align: center;
+}
+.path-node-odor {
+  background: rgba(125, 211, 252, 0.1);
+  border-color: rgba(125, 211, 252, 0.3);
+}
+.path-node-intermediate {
+  background: rgba(148, 163, 184, 0.08);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+.path-node-reaction {
+  background: rgba(167, 139, 250, 0.1);
+  border-color: rgba(167, 139, 250, 0.3);
+}
+.path-node .cpd-name { font-weight: 600; color: var(--ink); font-size: 11px; }
+.path-node .cpd-id { font-size: 9px; color: var(--muted); }
+.path-arrow {
+  color: #475569;
+  font-size: 16px;
+  margin: 0 2px;
+  display: inline-flex;
+  align-items: center;
+}
+.path-rxn-badge {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 8px;
+  background: rgba(167, 139, 250, 0.1);
+  border: 1px solid rgba(167, 139, 250, 0.3);
+  border-radius: 8px;
+  font-size: 10px;
+}
+.path-rxn-badge .rxn-id { color: #a78bfa; font-weight: 600; }
+.path-rxn-badge .ec-label { color: #facc15; font-size: 9px; }
+.path-ec-badge {
+  display: inline-block;
+  padding: 2px 6px;
+  background: rgba(250, 204, 21, 0.1);
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  border-radius: 6px;
+  font-size: 9px;
+  color: #facc15;
+  font-weight: 600;
+}
+.odor-badge {
+  display: inline-block;
+  padding: 1px 5px;
+  background: rgba(125, 211, 252, 0.12);
+  border: 1px solid rgba(125, 211, 252, 0.3);
+  border-radius: 5px;
+  font-size: 9px;
+  color: #7dd3fc;
+  margin: 1px;
+}
+
+/* Answer banner */
+.answer-banner {
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.answer-banner-yes {
+  background: rgba(124, 218, 123, 0.1);
+  border: 1px solid rgba(124, 218, 123, 0.3);
+  color: var(--good);
+}
+.answer-banner-no {
+  background: rgba(248, 113, 113, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  color: var(--bad);
+}
+.answer-banner-info {
+  background: rgba(45, 212, 191, 0.1);
+  border: 1px solid rgba(45, 212, 191, 0.3);
+  color: var(--accent-2);
+}
+
+/* Reasoning report */
+.report-section {
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(18, 26, 35, 0.85);
+}
+.report-section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.report-section-title .verdict {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 10px;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.verdict-true { background: rgba(124, 218, 123, 0.15); color: var(--good); border: 1px solid rgba(124, 218, 123, 0.4); }
+.verdict-false { background: rgba(248, 113, 113, 0.15); color: var(--bad); border: 1px solid rgba(248, 113, 113, 0.4); }
+.verdict-unknown { background: rgba(245, 158, 11, 0.15); color: var(--warn); border: 1px solid rgba(245, 158, 11, 0.4); }
+.report-proposition {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 6px;
+  line-height: 1.5;
+}
+.report-body { font-size: 12px; color: #cbd5e1; line-height: 1.7; }
+.report-body p { margin-bottom: 6px; }
+.report-body strong { color: var(--ink); }
+.report-evidence-list { list-style: none; padding: 0; margin: 6px 0; }
+.report-evidence-list li {
+  padding: 4px 0 4px 16px;
+  position: relative;
+  font-size: 11px;
+}
+.report-evidence-list li::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-2);
+}
+.report-evidence-list li.counter::before { background: var(--bad); }
+.report-evidence-list li.neutral::before { background: var(--muted); }
+.report-cut-set {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: rgba(255, 122, 89, 0.1);
+  border: 1px solid rgba(255, 122, 89, 0.3);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+}
+.report-hypothesis {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px dashed rgba(45, 212, 191, 0.4);
+  border-radius: 10px;
+  background: rgba(45, 212, 191, 0.05);
+  font-size: 11px;
+  color: var(--accent-2);
+}
+.report-hypothesis strong { color: var(--accent-2); }
+.report-counter-path {
+  margin: 8px 0;
+  padding: 8px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 10px;
+  background: rgba(248, 113, 113, 0.05);
+}
+
+/* Trace tree */
+.trace-tree { font-size: 11px; color: #cbd5e1; }
+.trace-tree .trace-node { position: relative; padding: 6px 0 6px 20px; margin-left: 12px; border-left: 1px solid var(--line); }
+.trace-tree .trace-node:last-child { border-left-color: transparent; }
+.trace-tree .trace-node::before {
+  content: '';
+  position: absolute; left: 0; top: 14px;
+  width: 14px; height: 1px;
+  background: var(--line);
+}
+.trace-tree .trace-node-root { margin-left: 0; border-left: none; padding-left: 0; }
+.trace-tree .trace-node-root::before { display: none; }
+.trace-icon { display: inline-block; width: 16px; text-align: center; margin-right: 4px; font-size: 10px; }
+.trace-icon-fact { color: var(--good); }
+.trace-icon-rule { color: var(--accent); }
+.trace-icon-builtin { color: var(--accent-3); }
+.trace-goal { color: var(--accent-2); font-weight: 700; }
+.trace-rule-text { color: var(--muted); font-size: 10px; margin-top: 2px; }
+.trace-fact-text { color: var(--good); }
+.trace-semantic { line-height: 1.6; }
+
+.explain-block { margin-top: 8px; padding: 8px; border-radius: 10px; border: 1px dashed var(--line); background: rgba(10, 15, 21, 0.6); }
+.explain-title { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+.explain-line { font-size: 11px; color: #cbd5e1; margin-bottom: 4px; }
+
+/* EC analysis table */
+.ec-table { width: 100%; border-collapse: collapse; font-size: 11px; margin-top: 8px; }
+.ec-table th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+.ec-table td { padding: 6px 8px; border-bottom: 1px solid rgba(42, 52, 65, 0.4); }
+
+/* Collapsible */
+.collapsible-toggle {
+  cursor: pointer;
+  user-select: none;
+  font-size: 10px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.collapsible-toggle:hover { color: var(--accent-2); }
+.collapsible-content { display: none; }
+.collapsible-content.open { display: block; }
+
+@media (max-width: 980px) {
+  .workspace { grid-template-columns: 1fr; }
+  .panel { max-height: none; }
+  .canvas { max-height: none; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo"></div>
+      <div>
+        <h1>Odor Graph Reasoner</h1>
+        <p>Real-time KEGG graph + Prolog inference for odor transformations</p>
+      </div>
+    </div>
+    <div class="top-stats">
+      <div class="stat-pill">Nodes <span class="num" id="stat-nodes">0</span></div>
+      <div class="stat-pill">Edges <span class="num" id="stat-edges">0</span></div>
+      <div class="stat-pill">Odor cpds <span class="num" id="stat-odor-cpds">0</span></div>
+      <div class="stat-pill">Reactions <span class="num" id="stat-rxns">0</span></div>
+      <div class="stat-pill">Virtual facts <span class="num" id="stat-facts">0</span></div>
+    </div>
+  </header>
+
+  <div class="workspace">
+    <aside class="panel">
+      <!-- Card 1: Data Loader -->
+      <section class="card">
+        <div class="card-title">Data Loader</div>
+        <div class="file-grid">
+          <div class="file-row">
+            <label>compound_reaction_links.tsv</label>
+            <span id="st-tsv" class="status status-pending">pending</span>
+            <button class="file-btn" onclick="pickFile('tsv')">Load</button>
+            <input type="file" id="fi-tsv" class="file-input" accept=".tsv" onchange="loadLocalFile(this,'tsv')">
+          </div>
+          <div class="file-row">
+            <label>complete_reaction_cache.json</label>
+            <span id="st-rxncache" class="status status-pending">pending</span>
+            <button class="file-btn" onclick="pickFile('rxncache')">Load</button>
+            <input type="file" id="fi-rxncache" class="file-input" accept=".json" onchange="loadLocalFile(this,'rxncache')">
+          </div>
+          <div class="file-row">
+            <label>main_pairs.json</label>
+            <span id="st-mainpairs" class="status status-pending">pending</span>
+            <button class="file-btn" onclick="pickFile('mainpairs')">Load</button>
+            <input type="file" id="fi-mainpairs" class="file-input" accept=".json" onchange="loadLocalFile(this,'mainpairs')">
+          </div>
+          <div class="file-row">
+            <label>tgsc_to_kegg.csv</label>
+            <span id="st-tgsc" class="status status-pending">pending</span>
+            <button class="file-btn" onclick="pickFile('tgsc')">Load</button>
+            <input type="file" id="fi-tgsc" class="file-input" accept=".csv" onchange="loadLocalFile(this,'tgsc')">
+          </div>
+          <div class="file-row">
+            <label>ec_section_hierarchy.json</label>
+            <span id="st-echier" class="status status-pending">pending</span>
+            <button class="file-btn" onclick="pickFile('echier')">Load</button>
+            <input type="file" id="fi-echier" class="file-input" accept=".json" onchange="loadLocalFile(this,'echier')">
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-ghost" onclick="autoFetch()">Auto-fetch (same dir)</button>
+        </div>
+        <div class="settings-grid">
+          <div class="slider-row">
+            <label>Depth:</label>
+            <input type="range" id="depthSlider" min="1" max="4" value="2" oninput="document.getElementById('depthVal').textContent=this.value">
+            <span class="slider-val" id="depthVal">2</span>
+          </div>
+          <div class="toggle-row">
+            <input type="checkbox" id="useMainPairs" checked>
+            <label for="useMainPairs">Use main pairs (directional)</label>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-accent2" id="buildBtn" onclick="onBuildGraph()" disabled>Build Graph</button>
+        </div>
+        <div class="progress-bar" id="progressBar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </section>
+
+      <!-- Card 2: Constraint Builder -->
+      <section class="card">
+        <div class="card-title">Odor Transform Finder</div>
+        <div class="constraint-row">
+          <label>From:</label>
+          <select class="constraint-select" id="cb-from"><option value="">--</option></select>
+        </div>
+        <div class="constraint-row">
+          <label>To:</label>
+          <select class="constraint-select" id="cb-to"><option value="">--</option></select>
+        </div>
+        <div class="constraint-row">
+          <label>Must EC:</label>
+          <input class="constraint-input" id="cb-ec" placeholder="e.g. 1.2.4">
+        </div>
+        <div class="constraint-row">
+          <label>Exclude:</label>
+          <input class="constraint-input" id="cb-exclude" placeholder="e.g. R01142">
+        </div>
+        <div class="constraint-row">
+          <label>Steps:</label>
+          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+            <input type="range" id="cb-steps" min="1" max="6" value="3" style="flex:1;accent-color:var(--accent-2);" oninput="document.getElementById('cb-steps-val').textContent=this.value">
+            <span class="slider-val" id="cb-steps-val">3</span>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="onFindTransformations()">Find Paths</button>
+          <button class="btn btn-ghost" onclick="onReachability()">Reachability</button>
+          <button class="btn btn-ghost" onclick="onECAnalysis()">EC Analysis</button>
+          <button class="btn btn-ghost" onclick="onCounterfactual()">Counterfactual</button>
+        </div>
+      </section>
+
+      <!-- Card 3: Necessity Experiment -->
+      <section class="card">
+        <div class="card-title">Necessity Experiment</div>
+        <div class="constraint-row">
+          <label>Target:</label>
+          <input class="constraint-input" id="exp-target" value="C16286" placeholder="KEGG compound ID">
+        </div>
+        <div class="constraint-row">
+          <label>Hypothesis:</label>
+          <input class="constraint-input" id="exp-ec" value="4.1.99" placeholder="EC to test (e.g. 4.1.99)">
+        </div>
+        <div class="constraint-row">
+          <label>Max steps:</label>
+          <div style="display:flex;align-items:center;gap:8px;width:100%;">
+            <input type="range" id="exp-steps" min="1" max="6" value="4" style="flex:1;accent-color:var(--accent);" oninput="document.getElementById('exp-steps-val').textContent=this.value">
+            <span class="slider-val" id="exp-steps-val">4</span>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="runNecessityExperiment()">Run Full Analysis</button>
+          <button class="btn btn-ghost" onclick="runNecessityExperiment('geosmin')">Geosmin Demo</button>
+        </div>
+        <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.5;">
+          Tests: (1) Enumerate all paths to target (2) Check if hypothesis EC is in ALL paths (3) Search for counterexample path without that EC (4) Compute minimal cut set (5) Counterfactual: remove EC, check reachability (6) Generate falsifiable report.
+        </div>
+      </section>
+
+      <!-- Card 4: Query Studio -->
+      <section class="card">
+        <div class="card-title">Query Studio</div>
+        <textarea class="query-input" id="queryInput" placeholder="?- can_transform(burnt, ketonic).&#10;?- path_search(C00141, C05771, 3, Path).&#10;?- ec_connects(1.2.4, OdorA, OdorB)."></textarea>
+        <div class="btn-row">
+          <button class="btn btn-primary" onclick="runQuery()">Run query</button>
+          <button class="btn btn-ghost" onclick="findAll()">Find all</button>
+          <button class="btn btn-ghost" onclick="clearResults()">Clear</button>
+        </div>
+      </section>
+
+      <!-- Card 4: Example Queries -->
+      <section class="card">
+        <div class="card-title">Example Queries</div>
+        <div class="example-group">
+          <h4>Odor transforms</h4>
+          <button class="example-btn" onclick="setQuery('?- can_transform(burnt, ketonic).')">?- can_transform(burnt, ketonic).</button>
+          <button class="example-btn" onclick="setQuery('?- can_transform(geranium, X).')">?- can_transform(geranium, X).</button>
+        </div>
+        <div class="example-group">
+          <h4>Path search</h4>
+          <button class="example-btn" onclick="setQuery('?- path_search(C00141, C05771, 3, Path).')">?- path_search(C00141, C05771, 3, Path).</button>
+          <button class="example-btn" onclick="setQuery('?- one_step(C00022, B, Rxn).')">?- one_step(C00022, B, Rxn).</button>
+          <button class="example-btn" onclick="setQuery('?- one_step_ec(C00022, B, Rxn, EC).')">?- one_step_ec(C00022, B, Rxn, EC).</button>
+        </div>
+        <div class="example-group">
+          <h4>EC analysis</h4>
+          <button class="example-btn" onclick="setQuery('?- ec_connects(2.3.1, OdorA, OdorB).')">?- ec_connects(2.3.1, OdorA, OdorB).</button>
+        </div>
+        <div class="example-group">
+          <h4>Counterfactual</h4>
+          <button class="example-btn" onclick="setQuery('?- path_without(C00141, C05771, R_R01142, Path).')">?- path_without(C00141, C05771, R_R01142, Path).</button>
+        </div>
+        <div class="example-group">
+          <h4>Graph inspection</h4>
+          <button class="example-btn" onclick="setQuery('?- compound_odor(C00109, X).')">?- compound_odor(C00109, X).</button>
+          <button class="example-btn" onclick="setQuery('?- compound_name(C00109, Name).')">?- compound_name(C00109, Name).</button>
+          <button class="example-btn" onclick="setQuery('?- odor_compound(X).')">?- odor_compound(X).</button>
+        </div>
+      </section>
+    </aside>
+
+    <main class="canvas" id="mainArea">
+      <div class="empty" id="emptyState">
+        <h3>Load raw data, build graph, then query</h3>
+        <p>1. Click "Auto-fetch" to load 5 raw data files from the same directory.</p>
+        <p>2. Click "Build Graph" to construct the EC network from raw KEGG data.</p>
+        <p>3. Use the Constraint Builder or Query Studio to explore odor transformations.</p>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+// =========================================================================
+// MODULE 1: DATA LOADING + GRAPH CONSTRUCTION
+// =========================================================================
+
+const UBIQUITOUS = new Set([
+  'C00001','C00007','C00080','C00011','C00014','C00059','C00283',
+  'C00002','C00008','C00020','C00013','C00009','C00044','C00035',
+  'C00075','C00015','C00063','C00112','C00003','C00004','C00005',
+  'C00006','C00016','C01352','C00061','C01847','C00010','C00024',
+  'C00083','C00091','C00019','C00021','C00101','C00234','C00440',
+  'C00053','C00054'
+]);
+const BACKGROUND_EC = new Set(['1.1.1']);
+
+// Performance: cap how many products a single reaction can connect to.
+// Reactions like R01011 have 422 non-ubiquitous main_pairs → DFS branching
+// factor of ~449 makes depth-4 search combinatorially explode (~449^4).
+const REACTION_DEGREE_CAP = 30;
+
+// Time budget (ms) for any single path enumeration call.
+const PATH_TIME_BUDGET_MS = 500;
+
+const RAW = {
+  compoundReactionTSV: null,
+  reactionCache: null,
+  mainPairs: null,
+  tgscCSV: null,
+  ecHierarchy: null,
+};
+
+const PARSED = {
+  compoundToReactions: new Map(),
+  reactionToCompounds: new Map(),
+  ecData: {},
+  reversibility: {},
+  mainPairsIndex: new Map(), // reaction -> Map<c_in, Set<c_out>>
+  tgscProfiles: new Map(),   // keggId -> {name, odors, tgscId}
+  ecNames: {},               // ec2 -> {name, main_class_name}
+  odorColumns: [],
+};
+
+const GRAPH = {
+  nodes: new Map(),
+  adjOut: new Map(),
+  adjIn: new Map(),
+  odorCompounds: new Set(),
+  allOdors: [],
+  stats: {}
+};
+
+// DB no longer stores pre-materialized facts.
+// All predicates are resolved lazily via VIRTUAL_PREDICATES + GRAPH.
+
+// --- File Parsers ---
+
+function parseCompoundReactionTSV(text) {
+  const c2r = new Map();
+  const r2c = new Map();
+  const lines = text.split('\n');
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    const parts = line.split('\t');
+    if (parts.length < 2) continue;
+    const cpd = parts[0].replace('cpd:', '').trim();
+    const rxn = parts[1].replace('rn:', '').trim();
+    if (UBIQUITOUS.has(cpd)) continue;
+    if (!c2r.has(cpd)) c2r.set(cpd, new Set());
+    c2r.get(cpd).add(rxn);
+    if (!r2c.has(rxn)) r2c.set(rxn, new Set());
+    r2c.get(rxn).add(cpd);
+  }
+  PARSED.compoundToReactions = c2r;
+  PARSED.reactionToCompounds = r2c;
+  return { compounds: c2r.size, reactions: r2c.size };
+}
+
+function parseReactionCache(json) {
+  const data = typeof json === 'string' ? JSON.parse(json) : json;
+  const succ = data.successful || data;
+  PARSED.ecData = succ.ec_data || {};
+  PARSED.reversibility = succ.reversibility || {};
+  return { reactions: Object.keys(PARSED.ecData).length };
+}
+
+function parseMainPairs(json) {
+  const data = typeof json === 'string' ? JSON.parse(json) : json;
+  const idx = new Map();
+  for (const [rxn, pairs] of Object.entries(data)) {
+    const m = new Map();
+    for (const pair of pairs) {
+      if (pair.length < 2) continue;
+      const cIn = pair[0], cOut = pair[1];
+      if (UBIQUITOUS.has(cIn) || UBIQUITOUS.has(cOut)) continue;
+      if (!m.has(cIn)) m.set(cIn, new Set());
+      m.get(cIn).add(cOut);
+    }
+    if (m.size > 0) idx.set(rxn, m);
+  }
+  PARSED.mainPairsIndex = idx;
+  return { reactions: idx.size };
+}
+
+function parseTGSC(text) {
+  const lines = text.split('\n');
+  if (lines.length < 2) return { compounds: 0 };
+  const header = lines[0].split(',');
+  // Find column indices
+  const keggIdx = header.indexOf('KEGG_IDs');
+  const nameIdx = header.indexOf('IUPACName');
+  const tgscIdx = header.indexOf('TGSC ID');
+  const descIdx = header.indexOf('Updated_Desc_v2');
+  const solventIdx = header.indexOf('Solvent');
+  if (keggIdx < 0) return { compounds: 0, error: 'No KEGG_IDs column' };
+
+  // Odor columns: all binary columns after Solvent
+  const odorStart = solventIdx >= 0 ? solventIdx + 1 : -1;
+  const odorCols = [];
+  if (odorStart > 0) {
+    for (let i = odorStart; i < header.length; i++) {
+      odorCols.push({ idx: i, name: header[i].trim() });
+    }
+  }
+  PARSED.odorColumns = odorCols;
+
+  const profiles = new Map();
+  for (let li = 1; li < lines.length; li++) {
+    const line = lines[li];
+    if (!line.trim()) continue;
+    // Parse CSV carefully (handle commas in quoted fields)
+    const cols = parseCSVLine(line);
+    const keggRaw = cols[keggIdx] || '';
+    if (!keggRaw || keggRaw === '?' || keggRaw === '') continue;
+    // May have multiple KEGG IDs separated by ;
+    const keggIds = keggRaw.split(';').map(s => s.trim()).filter(Boolean);
+    const name = (cols[nameIdx] || '').trim();
+    const tgscId = (cols[tgscIdx] || '').trim();
+    const desc = (cols[descIdx] || '').trim();
+
+    // Extract odors from binary columns
+    const odors = [];
+    for (const oc of odorCols) {
+      if (oc.idx < cols.length && cols[oc.idx].trim() === '1') {
+        odors.push(oc.name);
+      }
+    }
+    // Also extract from description
+    if (desc && desc !== 'odorless') {
+      const descOdors = desc.split(';').map(s => s.trim()).filter(Boolean);
+      for (const d of descOdors) {
+        if (d !== 'odorless' && !odors.includes(d)) odors.push(d);
+      }
+    }
+
+    // Skip odorless
+    if (odors.length === 0 || (odors.length === 1 && odors[0] === 'odorless')) continue;
+    const filteredOdors = odors.filter(o => o !== 'odorless');
+    if (filteredOdors.length === 0) continue;
+
+    for (const kid of keggIds) {
+      if (!profiles.has(kid)) {
+        profiles.set(kid, { name, odors: filteredOdors, tgscId });
+      }
+    }
+  }
+  PARSED.tgscProfiles = profiles;
+  return { compounds: profiles.size };
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let cur = '';
+  let inQuote = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQuote && i + 1 < line.length && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQuote = !inQuote;
+      }
+    } else if (ch === ',' && !inQuote) {
+      result.push(cur);
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
+function parseEcHierarchy(json) {
+  const data = typeof json === 'string' ? JSON.parse(json) : json;
+  PARSED.ecNames = {};
+  for (const [ec2, info] of Object.entries(data)) {
+    PARSED.ecNames[ec2] = { name: info.name || '', main_class_name: info.main_class_name || '' };
+  }
+  return { sections: Object.keys(data).length };
+}
+
+function toEcLevel(ec, level) {
+  const parts = ec.split('.');
+  return parts.slice(0, level).join('.');
+}
+
+function getEcClassName(ec3) {
+  // Try ec2 lookup
+  const ec2 = toEcLevel(ec3, 2);
+  const info = PARSED.ecNames[ec2];
+  if (info) return info.main_class_name || info.name || '';
+  return '';
+}
+
+// --- Graph Construction ---
+
+function buildGraph(depth, useMainPairs) {
+  GRAPH.nodes.clear();
+  GRAPH.adjOut.clear();
+  GRAPH.adjIn.clear();
+  GRAPH.odorCompounds.clear();
+  GRAPH.allOdors = [];
+
+  const tgsc = PARSED.tgscProfiles;
+  const c2r = PARSED.compoundToReactions;
+  const r2c = PARSED.reactionToCompounds;
+
+  // Step 1: Seed with odorous compounds
+  const seedCompounds = new Set();
+  for (const [kid, profile] of tgsc) {
+    if (UBIQUITOUS.has(kid)) continue;
+    if (c2r.has(kid)) {
+      seedCompounds.add(kid);
+    }
+  }
+
+  // Step 2: BFS expansion
+  const allCompounds = new Set(seedCompounds);
+  const allReactions = new Set();
+  let frontier = new Set(seedCompounds);
+
+  for (let d = 0; d < depth; d++) {
+    const nextFrontier = new Set();
+    for (const cpd of frontier) {
+      const rxns = c2r.get(cpd);
+      if (!rxns) continue;
+      for (const rxn of rxns) {
+        if (allReactions.has(rxn)) continue;
+        allReactions.add(rxn);
+        const cpds = r2c.get(rxn);
+        if (!cpds) continue;
+        for (const c of cpds) {
+          if (!allCompounds.has(c) && !UBIQUITOUS.has(c)) {
+            allCompounds.add(c);
+            nextFrontier.add(c);
+          }
+        }
+      }
+    }
+    frontier = nextFrontier;
+  }
+
+  // Step 3: Create nodes
+  for (const cpd of allCompounds) {
+    const profile = tgsc.get(cpd);
+    if (profile) {
+      GRAPH.nodes.set(cpd, {
+        type: 'odor_compound',
+        name: profile.name || cpd,
+        odors: profile.odors || [],
+        tgscId: profile.tgscId || '',
+      });
+      GRAPH.odorCompounds.add(cpd);
+    } else {
+      GRAPH.nodes.set(cpd, {
+        type: 'intermediate',
+        name: 'Intermediate_' + cpd,
+        odors: [],
+      });
+    }
+  }
+
+  for (const rxn of allReactions) {
+    const ecRaw = PARSED.ecData[rxn] || [];
+    const ec3List = [];
+    for (const ec of ecRaw) {
+      if (!ec) continue;
+      const t = toEcLevel(ec, 3);
+      if (!BACKGROUND_EC.has(t) && !ec3List.includes(t)) ec3List.push(t);
+    }
+    const nodeId = 'R_' + rxn;
+    GRAPH.nodes.set(nodeId, {
+      type: 'reaction',
+      rxnId: rxn,
+      ec3: ec3List,
+    });
+  }
+
+  // Step 4: Create edges
+  function addEdge(from, to) {
+    if (!GRAPH.adjOut.has(from)) GRAPH.adjOut.set(from, new Set());
+    GRAPH.adjOut.get(from).add(to);
+    if (!GRAPH.adjIn.has(to)) GRAPH.adjIn.set(to, new Set());
+    GRAPH.adjIn.get(to).add(from);
+  }
+
+  for (const rxn of allReactions) {
+    const nodeId = 'R_' + rxn;
+    const cpds = r2c.get(rxn);
+    if (!cpds) continue;
+
+    if (useMainPairs && PARSED.mainPairsIndex.has(rxn)) {
+      const pairsMap = PARSED.mainPairsIndex.get(rxn);
+      // Collect all unique inputs and outputs for this reaction
+      const allInputs = new Set();
+      const allOutputs = new Set();
+      for (const [cIn, cOuts] of pairsMap) {
+        if (allCompounds.has(cIn)) allInputs.add(cIn);
+        for (const cOut of cOuts) {
+          if (allCompounds.has(cOut)) allOutputs.add(cOut);
+        }
+      }
+      // Apply degree cap: if too many products, keep only REACTION_DEGREE_CAP
+      let cappedOutputs = allOutputs;
+      if (allOutputs.size > REACTION_DEGREE_CAP) {
+        cappedOutputs = new Set([...allOutputs].slice(0, REACTION_DEGREE_CAP));
+      }
+      let cappedInputs = allInputs;
+      if (allInputs.size > REACTION_DEGREE_CAP) {
+        cappedInputs = new Set([...allInputs].slice(0, REACTION_DEGREE_CAP));
+      }
+      for (const cIn of cappedInputs) addEdge(cIn, nodeId);
+      for (const cOut of cappedOutputs) addEdge(nodeId, cOut);
+      // Reverse edges if reversible
+      if (PARSED.reversibility[rxn]) {
+        for (const cOut of cappedOutputs) addEdge(cOut, nodeId);
+        for (const cIn of cappedInputs) addEdge(nodeId, cIn);
+      }
+    } else {
+      // Bidirectional (reactions without main_pairs have few compounds, typically <10)
+      for (const c of cpds) {
+        if (!allCompounds.has(c)) continue;
+        addEdge(c, nodeId);
+        addEdge(nodeId, c);
+      }
+    }
+  }
+
+  // Step 5: Collect all odors for UI
+  const odorSet = new Set();
+  for (const cpd of GRAPH.odorCompounds) {
+    const node = GRAPH.nodes.get(cpd);
+    if (node && node.odors) {
+      for (const o of node.odors) odorSet.add(o);
+    }
+  }
+  GRAPH.allOdors = [...odorSet].sort();
+
+  // Stats
+  let edgeCount = 0;
+  let maxDegree = 0;
+  let maxDegreeNode = '';
+  for (const [nodeId, s] of GRAPH.adjOut) {
+    edgeCount += s.size;
+    if (s.size > maxDegree) { maxDegree = s.size; maxDegreeNode = nodeId; }
+  }
+  let rxnCount = 0;
+  for (const [, n] of GRAPH.nodes) { if (n.type === 'reaction') rxnCount++; }
+
+  GRAPH.stats = {
+    nodes: GRAPH.nodes.size,
+    edges: edgeCount,
+    odorCompounds: GRAPH.odorCompounds.size,
+    reactions: rxnCount,
+    maxDegree,
+    maxDegreeNode,
+  };
+  console.log(`Graph built: ${GRAPH.nodes.size} nodes, ${edgeCount} edges, max degree ${maxDegree} (${maxDegreeNode}), cap=${REACTION_DEGREE_CAP}`);
+
+  return GRAPH.stats;
+}
+
+// =========================================================================
+// MODULE 2: VIRTUAL PREDICATES — LAZY GRAPH QUERY (NO PRE-MATERIALIZATION)
+// =========================================================================
+//
+// Instead of pre-computing thousands of Prolog facts, each "base" predicate
+// (edge, reaction_ec, compound_odor, compound_name, odor_compound) is resolved
+// on-the-fly by querying GRAPH data structures directly.  When a variable is
+// already bound we do an O(1) map lookup; when unbound we iterate only the
+// relevant subset.  This is the core "real-time graph reasoning" mechanism.
+//
+// The old generatePrologFacts() materialized ~5000+ facts into an array and
+// the engine linearly scanned them.  Now there is zero pre-computation;
+// every fact is produced lazily at query time.
+
+// Build secondary indices once after graph construction.
+// These are cheap O(n) passes that create lookup maps the virtual predicates
+// need for the "both args unbound" case.
+
+const GRAPH_INDEX = {
+  // odor -> Set<compoundId>
+  odorToCompounds: new Map(),
+  // compoundId -> name (all compounds, not just odor)
+  compoundNames: new Map(),
+};
+
+function buildGraphIndices() {
+  GRAPH_INDEX.odorToCompounds.clear();
+  GRAPH_INDEX.compoundNames.clear();
+
+  for (const cpd of GRAPH.odorCompounds) {
+    const node = GRAPH.nodes.get(cpd);
+    if (!node) continue;
+    for (const odor of node.odors) {
+      if (!GRAPH_INDEX.odorToCompounds.has(odor)) GRAPH_INDEX.odorToCompounds.set(odor, new Set());
+      GRAPH_INDEX.odorToCompounds.get(odor).add(cpd);
+    }
+    GRAPH_INDEX.compoundNames.set(cpd, node.name);
+  }
+  for (const [nodeId, node] of GRAPH.nodes) {
+    if (node.type === 'intermediate') {
+      GRAPH_INDEX.compoundNames.set(nodeId, node.name);
+    }
+  }
+}
+
+// ---------- Virtual predicate resolvers ----------
+// Each returns an array of {args: string[]} matching the query pattern,
+// leveraging bound arguments to narrow the search.
+
+const VIRTUAL_PREDICATES = {
+
+  // edge(From, To) — adjacency lookup
+  edge(goalArgs, subst) {
+    const a0 = resolveTerm(goalArgs[0], subst);
+    const a1 = resolveTerm(goalArgs[1], subst);
+    const results = [];
+
+    if (a0.type === 'const') {
+      // From is bound → O(1) map lookup + iterate neighbors
+      const neighbors = GRAPH.adjOut.get(a0.value);
+      if (!neighbors) return results;
+      if (a1.type === 'const') {
+        // Both bound → O(1) membership check
+        if (neighbors.has(a1.value)) results.push({ args: [a0.value, a1.value] });
+      } else {
+        // From bound, To unbound → iterate neighbors
+        for (const to of neighbors) results.push({ args: [a0.value, to] });
+      }
+    } else if (a1.type === 'const') {
+      // To bound, From unbound → use adjIn
+      const sources = GRAPH.adjIn.get(a1.value);
+      if (!sources) return results;
+      for (const from of sources) results.push({ args: [from, a1.value] });
+    } else {
+      // Both unbound → full enumeration (rare in practice)
+      for (const [from, neighbors] of GRAPH.adjOut) {
+        for (const to of neighbors) results.push({ args: [from, to] });
+      }
+    }
+    return results;
+  },
+
+  // reaction_ec(ReactionNodeId, EC3)
+  reaction_ec(goalArgs, subst) {
+    const a0 = resolveTerm(goalArgs[0], subst);
+    const a1 = resolveTerm(goalArgs[1], subst);
+    const results = [];
+
+    if (a0.type === 'const') {
+      const node = GRAPH.nodes.get(a0.value);
+      if (!node || node.type !== 'reaction') return results;
+      if (a1.type === 'const') {
+        if (node.ec3.includes(a1.value)) results.push({ args: [a0.value, a1.value] });
+      } else {
+        for (const ec of node.ec3) results.push({ args: [a0.value, ec] });
+      }
+    } else if (a1.type === 'const') {
+      // EC bound → scan all reactions for this EC
+      for (const [nodeId, node] of GRAPH.nodes) {
+        if (node.type === 'reaction' && node.ec3.includes(a1.value)) {
+          results.push({ args: [nodeId, a1.value] });
+        }
+      }
+    } else {
+      for (const [nodeId, node] of GRAPH.nodes) {
+        if (node.type !== 'reaction') continue;
+        for (const ec of node.ec3) results.push({ args: [nodeId, ec] });
+      }
+    }
+    return results;
+  },
+
+  // compound_odor(CompoundId, Odor)
+  compound_odor(goalArgs, subst) {
+    const a0 = resolveTerm(goalArgs[0], subst);
+    const a1 = resolveTerm(goalArgs[1], subst);
+    const results = [];
+
+    if (a0.type === 'const') {
+      const node = GRAPH.nodes.get(a0.value);
+      if (!node || !node.odors || node.odors.length === 0) return results;
+      if (a1.type === 'const') {
+        if (node.odors.includes(a1.value)) results.push({ args: [a0.value, a1.value] });
+      } else {
+        for (const odor of node.odors) results.push({ args: [a0.value, odor] });
+      }
+    } else if (a1.type === 'const') {
+      // Odor bound → use reverse index
+      const cpds = GRAPH_INDEX.odorToCompounds.get(a1.value);
+      if (!cpds) return results;
+      for (const cpd of cpds) results.push({ args: [cpd, a1.value] });
+    } else {
+      for (const cpd of GRAPH.odorCompounds) {
+        const node = GRAPH.nodes.get(cpd);
+        if (!node) continue;
+        for (const odor of node.odors) results.push({ args: [cpd, odor] });
+      }
+    }
+    return results;
+  },
+
+  // compound_name(CompoundId, Name)
+  compound_name(goalArgs, subst) {
+    const a0 = resolveTerm(goalArgs[0], subst);
+    const a1 = resolveTerm(goalArgs[1], subst);
+    const results = [];
+
+    if (a0.type === 'const') {
+      const name = GRAPH_INDEX.compoundNames.get(a0.value);
+      if (!name) return results;
+      if (a1.type === 'const') {
+        if (name === a1.value) results.push({ args: [a0.value, name] });
+      } else {
+        results.push({ args: [a0.value, name] });
+      }
+    } else if (a1.type === 'const') {
+      for (const [id, name] of GRAPH_INDEX.compoundNames) {
+        if (name === a1.value) results.push({ args: [id, name] });
+      }
+    } else {
+      for (const [id, name] of GRAPH_INDEX.compoundNames) {
+        results.push({ args: [id, name] });
+      }
+    }
+    return results;
+  },
+
+  // odor_compound(CompoundId)
+  odor_compound(goalArgs, subst) {
+    const a0 = resolveTerm(goalArgs[0], subst);
+    const results = [];
+    if (a0.type === 'const') {
+      if (GRAPH.odorCompounds.has(a0.value)) results.push({ args: [a0.value] });
+    } else {
+      for (const cpd of GRAPH.odorCompounds) results.push({ args: [cpd] });
+    }
+    return results;
+  },
+};
+
+// Count "virtual facts" for stats display (does not materialize them)
+function countVirtualFacts() {
+  let count = 0;
+  // edges
+  for (const [, neighbors] of GRAPH.adjOut) count += neighbors.size;
+  // reaction_ec
+  for (const [, node] of GRAPH.nodes) {
+    if (node.type === 'reaction') count += node.ec3.length;
+  }
+  // compound_odor + compound_name + odor_compound
+  for (const cpd of GRAPH.odorCompounds) {
+    const node = GRAPH.nodes.get(cpd);
+    if (node) count += node.odors.length + 1 + 1; // odors + name + odor_compound
+  }
+  // intermediate names
+  for (const [, node] of GRAPH.nodes) {
+    if (node.type === 'intermediate') count += 1;
+  }
+  return count;
+}
+
+// =========================================================================
+// MODULE 3: PROLOG ENGINE
+// =========================================================================
+
+const PROLOG_MAX_DEPTH = 6;
+const PROLOG_MAX_RESULTS = 50;
+
+function v(name) { return { type: 'var', name }; }
+function c(value) { return { type: 'const', value: String(value) }; }
+
+function termToString(term) {
+  if (!term) return '?';
+  if (term.type === 'const') return term.value;
+  if (term.type === 'var') return term.name;
+  if (term.type === 'list') return '[' + (term.items || []).map(termToString).join(', ') + ']';
+  if (term.pred) return term.pred + '(' + term.args.map(termToString).join(', ') + ')';
+  return String(term);
+}
+
+function ruleToString(rule) {
+  return rule.display || (termToString(rule.head) + ' :- ' + rule.body.map(termToString).join(', ') + '.');
+}
+
+function resolveTerm(term, subst) {
+  if (term.type === 'var') {
+    const bound = subst[term.name];
+    if (bound) return resolveTerm(bound, subst);
+  }
+  return term;
+}
+
+function unify(t1, t2, subst) {
+  const a = resolveTerm(t1, subst);
+  const b = resolveTerm(t2, subst);
+  if (a.type === 'var') return bindVar(a, b, subst);
+  if (b.type === 'var') return bindVar(b, a, subst);
+  if (a.type === 'const' && b.type === 'const') return a.value === b.value ? subst : null;
+  if (a.type === 'list' && b.type === 'list') {
+    const aItems = a.items || [];
+    const bItems = b.items || [];
+    if (aItems.length !== bItems.length) return null;
+    let s = { ...subst };
+    for (let i = 0; i < aItems.length; i++) {
+      s = unify(aItems[i], bItems[i], s);
+      if (!s) return null;
+    }
+    return s;
+  }
+  if (a.pred && b.pred && a.pred === b.pred && a.args.length === b.args.length) {
+    let s = { ...subst };
+    for (let i = 0; i < a.args.length; i++) {
+      s = unify(a.args[i], b.args[i], s);
+      if (!s) return null;
+    }
+    return s;
+  }
+  return null;
+}
+
+function bindVar(vt, term, subst) {
+  if (vt.name === '_' || vt.name.startsWith('_')) return subst;
+  if (term.type === 'var' && term.name === vt.name) return subst;
+  const s = { ...subst };
+  s[vt.name] = term;
+  return s;
+}
+
+function standardizeApart(rule, suffix) {
+  const map = {};
+  function rename(term) {
+    if (term.type === 'var') {
+      if (term.name === '_') return { type: 'var', name: '_anon_' + suffix + '_' + Math.random().toString(36).slice(2,5) };
+      if (!map[term.name]) map[term.name] = { type: 'var', name: term.name + '_' + suffix };
+      return map[term.name];
+    }
+    if (term.type === 'const') return term;
+    if (term.type === 'list') return { type: 'list', items: (term.items || []).map(rename) };
+    return { pred: term.pred, args: term.args.map(rename) };
+  }
+  return {
+    name: rule.name,
+    display: rule.display,
+    head: rename(rule.head),
+    body: rule.body.map(rename),
+  };
+}
+
+function applySubstToGoal(goal, subst) {
+  return {
+    pred: goal.pred,
+    args: goal.args.map(a => resolveTerm(a, subst)),
+  };
+}
+
+// --- Native Path Search ---
+
+function findAllPaths(sourceId, targetId, maxSteps, excludeRxn, timeBudget) {
+  const results = [];
+  const MAX_PATHS = 50;
+  const deadline = performance.now() + (timeBudget || PATH_TIME_BUDGET_MS);
+  let timedOut = false;
+
+  function dfs(current, target, visited, path, stepsLeft) {
+    if (results.length >= MAX_PATHS || stepsLeft <= 0) return;
+    if (performance.now() > deadline) { timedOut = true; return; }
+    const neighbors = GRAPH.adjOut.get(current);
+    if (!neighbors) return;
+    for (const rxnNode of neighbors) {
+      if (timedOut || results.length >= MAX_PATHS) return;
+      const rn = GRAPH.nodes.get(rxnNode);
+      if (!rn || rn.type !== 'reaction') continue;
+      if (excludeRxn && rxnNode === excludeRxn) continue;
+      const rxnOut = GRAPH.adjOut.get(rxnNode);
+      if (!rxnOut) continue;
+      for (const product of rxnOut) {
+        if (timedOut || results.length >= MAX_PATHS) return;
+        if (visited.has(product)) continue;
+        const pn = GRAPH.nodes.get(product);
+        if (!pn || pn.type === 'reaction') continue;
+        const step = { from: current, rxn: rxnNode, to: product };
+        if (product === target) {
+          results.push([...path, step]);
+        } else if (stepsLeft > 1) {
+          visited.add(product);
+          dfs(product, target, visited, [...path, step], stepsLeft - 1);
+          visited.delete(product);
+        }
+      }
+    }
+  }
+
+  dfs(sourceId, targetId, new Set([sourceId]), [], maxSteps);
+  results.timedOut = timedOut;
+  return results;
+}
+
+function pathToListTerm(pathSteps) {
+  const items = pathSteps.map(s => ({
+    pred: 'step',
+    args: [c(s.from), c(s.rxn), c(s.to)],
+  }));
+  return { type: 'list', items };
+}
+
+// =========================================================================
+// MODULE 8: REASONING PRIMITIVES — NECESSITY, CUT SETS, COUNTERFACTUALS
+// =========================================================================
+//
+// These operate at a level ABOVE graph traversal:
+// - forall: check a universal property across ALL paths (not find ONE)
+// - minimal cut set: find the smallest intervention that breaks reachability
+// - counterfactual: remove a mechanism and re-evaluate
+//
+// Each produces a structured "reasoning report" with verdict + evidence,
+// not a traversal log.
+
+// BFS reachability: find which odor compounds can reach target within maxSteps.
+// Optionally exclude a set of reaction nodes (for counterfactual).
+// Returns Set of odor compound IDs. O(V+E), no exponential blowup.
+function bfsReachableOdorSources(targetId, maxSteps, excludedRxns) {
+  const reachableOdor = new Set();
+  let frontier = new Set([targetId]);
+  const visited = new Set([targetId]);
+  // Each compound-level step = 2 hops in bipartite graph (compound←reaction←compound)
+  const bfsLayers = maxSteps * 2;
+
+  for (let d = 0; d < bfsLayers; d++) {
+    const next = new Set();
+    for (const node of frontier) {
+      const preds = GRAPH.adjIn.get(node);
+      if (!preds) continue;
+      for (const pred of preds) {
+        if (visited.has(pred)) continue;
+        if (excludedRxns && excludedRxns.has(pred)) continue;
+        visited.add(pred);
+        const pn = GRAPH.nodes.get(pred);
+        if (!pn) continue;
+        if (pn.type === 'odor_compound') reachableOdor.add(pred);
+        next.add(pred);
+      }
+    }
+    frontier = next;
+    if (frontier.size === 0) break;
+  }
+  return reachableOdor;
+}
+
+// Collect sample paths (time-budgeted) from reachable odor sources to target.
+// Returns {sources: [{id, name, odors, paths}], totalPaths, timedOut}
+function collectSamplePaths(targetId, maxSteps, excludedRxns, maxSources, maxPathsPerSource, totalTimeBudget) {
+  maxSources = maxSources || 10;
+  maxPathsPerSource = maxPathsPerSource || 5;
+  totalTimeBudget = totalTimeBudget || 2000;
+
+  const reachable = bfsReachableOdorSources(targetId, maxSteps, excludedRxns);
+  const result = { sources: [], totalPaths: 0, timedOut: false, reachableSources: reachable.size };
+  const deadline = performance.now() + totalTimeBudget;
+  let sourcesSearched = 0;
+
+  for (const cpd of reachable) {
+    if (cpd === targetId) continue;
+    if (sourcesSearched >= maxSources || performance.now() > deadline) {
+      result.timedOut = true;
+      break;
+    }
+    sourcesSearched++;
+    const remaining = deadline - performance.now();
+    if (remaining <= 0) { result.timedOut = true; break; }
+
+    let paths;
+    if (excludedRxns && excludedRxns.size > 0) {
+      paths = findPathsExcludingReactions(cpd, targetId, maxSteps, excludedRxns, Math.min(remaining, PATH_TIME_BUDGET_MS));
+    } else {
+      paths = findAllPaths(cpd, targetId, maxSteps, null, Math.min(remaining, PATH_TIME_BUDGET_MS));
+    }
+    if (paths.timedOut) result.timedOut = true;
+    if (paths.length > 0) {
+      const node = GRAPH.nodes.get(cpd);
+      result.sources.push({
+        id: cpd,
+        name: node ? node.name : cpd,
+        odors: node ? (node.odors || []) : [],
+        paths: paths.slice(0, maxPathsPerSource),
+      });
+      result.totalPaths += Math.min(paths.length, maxPathsPerSource);
+    }
+  }
+  return result;
+}
+
+// Legacy wrapper: find all paths to target (now time-budgeted).
+function findAllPathsToTarget(targetId, maxSteps) {
+  return collectSamplePaths(targetId, maxSteps, null, 20, 10, 3000);
+}
+
+// Find all paths from a specific source to target (for directed analysis)
+function findAllPathsFromSource(sourceId, targetId, maxSteps) {
+  return findAllPaths(sourceId, targetId, maxSteps, null);
+}
+
+// Extract EC classes (level 3) from a path
+function extractPathECs(path) {
+  const ecs = new Set();
+  for (const step of path) {
+    const rxnNode = GRAPH.nodes.get(step.rxn);
+    if (rxnNode && rxnNode.ec3) {
+      for (const ec of rxnNode.ec3) ecs.add(ec);
+    }
+  }
+  return ecs;
+}
+
+// Check if a specific EC appears in a path (prefix match)
+function pathHasEC(path, ecPrefix) {
+  for (const step of path) {
+    const rxnNode = GRAPH.nodes.get(step.rxn);
+    if (rxnNode && rxnNode.ec3) {
+      for (const ec of rxnNode.ec3) {
+        if (ec === ecPrefix || ec.startsWith(ecPrefix + '.')) return true;
+      }
+    }
+  }
+  return false;
+}
+
+// ---- PRIMITIVE 1: FORALL PATHS REQUIRE EC ----
+// Uses BFS reachability approach:
+// 1. Find all reactions with the hypothesized EC
+// 2. Remove them and check if target is STILL reachable from any odor compound
+// 3. If NOT reachable → EC is necessary (all paths must use it)
+// 4. If still reachable → EC is NOT necessary; find counterexample paths
+//
+// This is O(V+E) for the reachability check, not exponential path enumeration.
+function analyzeNecessity(targetId, ecHypothesis, maxSteps) {
+  // Step 1: Check baseline reachability
+  const baselineSources = bfsReachableOdorSources(targetId, maxSteps, null);
+  if (baselineSources.size === 0) {
+    return { verdict: 'NO_PATHS', totalPaths: 0, pathsWithEC: 0, pathsWithoutEC: 0,
+             counterexamples: [], ecFrequency: new Map(), sources: [], allPaths: [] };
+  }
+
+  // Step 2: Find reactions with the hypothesized EC
+  const ecReactions = new Set();
+  for (const [nodeId, node] of GRAPH.nodes) {
+    if (node.type !== 'reaction') continue;
+    if (node.ec3 && node.ec3.some(ec => ec === ecHypothesis || ec.startsWith(ecHypothesis + '.'))) {
+      ecReactions.add(nodeId);
+    }
+  }
+
+  // Step 3: Remove EC reactions and check reachability (O(V+E))
+  const sourcesWithoutEC = bfsReachableOdorSources(targetId, maxSteps, ecReactions);
+
+  // Step 4: Determine verdict
+  const isNecessary = sourcesWithoutEC.size === 0;
+
+  // Step 5: Collect sample paths for the report (time-budgeted)
+  const samplePaths = collectSamplePaths(targetId, maxSteps, null, 10, 5, 2000);
+
+  // Analyze EC frequency across collected sample paths
+  let pathsWithEC = 0, pathsWithoutEC = 0;
+  const counterexamples = [];
+  const ecCounts = new Map();
+  const allPaths = [];
+
+  for (const src of samplePaths.sources) {
+    for (const path of src.paths) {
+      allPaths.push({ source: src, path });
+      const ecs = extractPathECs(path);
+      for (const ec of ecs) ecCounts.set(ec, (ecCounts.get(ec) || 0) + 1);
+      if (pathHasEC(path, ecHypothesis)) {
+        pathsWithEC++;
+      } else {
+        pathsWithoutEC++;
+        if (counterexamples.length < 5) counterexamples.push({ source: src, path });
+      }
+    }
+  }
+
+  // If BFS says necessary but we found counterexample paths, trust BFS
+  // (sample paths might be incomplete)
+  const ecFrequency = new Map();
+  const totalSample = allPaths.length;
+  for (const [ec, count] of ecCounts) {
+    ecFrequency.set(ec, { count, inAll: isNecessary ? (ec === ecHypothesis || ec.startsWith(ecHypothesis + '.')) : count === totalSample });
+  }
+
+  // If not necessary, find counterexample sample paths (from sources that survive EC removal)
+  if (!isNecessary && counterexamples.length === 0) {
+    const counterPaths = collectSamplePaths(targetId, maxSteps, ecReactions, 3, 2, 1000);
+    for (const src of counterPaths.sources) {
+      for (const path of src.paths) {
+        if (counterexamples.length < 5) counterexamples.push({ source: src, path });
+      }
+    }
+  }
+
+  return {
+    verdict: isNecessary ? 'NECESSARY' : 'NOT_NECESSARY',
+    totalPaths: samplePaths.totalPaths,
+    reachableSources: baselineSources.size,
+    reachableWithoutEC: sourcesWithoutEC.size,
+    ecReactionsRemoved: ecReactions.size,
+    pathsWithEC,
+    pathsWithoutEC,
+    counterexamples,
+    ecFrequency,
+    sources: samplePaths.sources,
+    allPaths,
+    sampleTimedOut: samplePaths.timedOut,
+  };
+}
+
+// ---- PRIMITIVE 2: MINIMAL CUT SET ----
+// Find the smallest set of EC classes that, if removed, makes target unreachable.
+// Uses BFS reachability: for each candidate EC, remove its reactions and test
+// reachability. Greedy: pick the EC whose removal eliminates the most sources.
+// O(|ECs| * (V+E)) — linear per EC, not exponential.
+function findMinimalCutSet(targetId, maxSteps) {
+  const baselineSources = bfsReachableOdorSources(targetId, maxSteps, null);
+  if (baselineSources.size === 0) return { cutSet: [], totalPaths: 0, isSinglePoint: false, allNecessary: [] };
+
+  // Gather all unique ECs in reactions reachable from target
+  const ecToReactions = new Map(); // ec -> Set<reaction nodeId>
+  for (const [nodeId, node] of GRAPH.nodes) {
+    if (node.type !== 'reaction') continue;
+    if (!node.ec3) continue;
+    for (const ec of node.ec3) {
+      if (!ecToReactions.has(ec)) ecToReactions.set(ec, new Set());
+      ecToReactions.get(ec).add(nodeId);
+    }
+  }
+
+  // Test each EC individually: is it necessary? (removing it → 0 sources)
+  const necessaryECs = [];
+  const ecEffectiveness = []; // {ec, sourcesRemaining}
+  for (const [ec, rxns] of ecToReactions) {
+    const remaining = bfsReachableOdorSources(targetId, maxSteps, rxns);
+    if (remaining.size === 0) {
+      necessaryECs.push(ec);
+    }
+    ecEffectiveness.push({ ec, rxns, remaining: remaining.size });
+  }
+
+  if (necessaryECs.length > 0) {
+    return {
+      cutSet: [necessaryECs[0]],
+      allNecessary: necessaryECs,
+      totalPaths: baselineSources.size,
+      isSinglePoint: true,
+    };
+  }
+
+  // Greedy: iteratively add the EC that removes the most remaining sources
+  const cutSet = [];
+  let cumulativeExcluded = new Set();
+
+  for (let iter = 0; iter < 10; iter++) {
+    const currentSources = bfsReachableOdorSources(targetId, maxSteps, cumulativeExcluded);
+    if (currentSources.size === 0) break;
+
+    let bestEC = null, bestRemaining = Infinity;
+    for (const { ec, rxns } of ecEffectiveness) {
+      if (cutSet.includes(ec)) continue;
+      const merged = new Set([...cumulativeExcluded, ...rxns]);
+      const rem = bfsReachableOdorSources(targetId, maxSteps, merged);
+      if (rem.size < bestRemaining) {
+        bestRemaining = rem.size;
+        bestEC = ec;
+      }
+    }
+    if (!bestEC) break;
+    cutSet.push(bestEC);
+    const newRxns = ecToReactions.get(bestEC);
+    if (newRxns) for (const r of newRxns) cumulativeExcluded.add(r);
+  }
+
+  return {
+    cutSet,
+    allNecessary: [],
+    totalPaths: baselineSources.size,
+    isSinglePoint: false,
+  };
+}
+
+// ---- PRIMITIVE 3: COUNTERFACTUAL REMOVE EC ----
+// Remove all reactions with a given EC and check if target is still reachable.
+// Uses BFS reachability (O(V+E)) for the verdict, then collects sample paths
+// only if surviving routes exist (time-budgeted).
+function counterfactualRemoveEC(targetId, ecToRemove, maxSteps) {
+  // Find reactions to exclude
+  const excludedRxns = new Set();
+  for (const [nodeId, node] of GRAPH.nodes) {
+    if (node.type !== 'reaction') continue;
+    if (node.ec3 && node.ec3.some(ec => ec === ecToRemove || ec.startsWith(ecToRemove + '.'))) {
+      excludedRxns.add(nodeId);
+    }
+  }
+
+  // BFS reachability: before (baseline)
+  const sourcesBefore = bfsReachableOdorSources(targetId, maxSteps, null);
+
+  // BFS reachability: after removal
+  const sourcesAfter = bfsReachableOdorSources(targetId, maxSteps, excludedRxns);
+  const isReachable = sourcesAfter.size > 0;
+
+  // Collect sample surviving paths only if target still reachable (time-budgeted)
+  let survivingSources = [];
+  let pathsAfterCount = 0;
+  if (isReachable) {
+    const surviving = collectSamplePaths(targetId, maxSteps, excludedRxns, 5, 3, 1500);
+    survivingSources = surviving.sources;
+    pathsAfterCount = surviving.totalPaths;
+  }
+
+  return {
+    reachable: isReachable,
+    sourcesBefore: sourcesBefore.size,
+    sourcesAfter: sourcesAfter.size,
+    pathsBefore: sourcesBefore.size, // now counts unique sources, not paths
+    pathsAfter: pathsAfterCount,
+    excludedReactions: excludedRxns.size,
+    survivingSources,
+    ecRemoved: ecToRemove,
+  };
+}
+
+// DFS that skips a set of reaction nodes (with time budget)
+function findPathsExcludingReactions(sourceId, targetId, maxSteps, excludedRxns, timeBudget) {
+  const results = [];
+  const MAX_PATHS = 50;
+  const deadline = performance.now() + (timeBudget || PATH_TIME_BUDGET_MS);
+  let timedOut = false;
+
+  function dfs(current, target, visited, path, stepsLeft) {
+    if (results.length >= MAX_PATHS || stepsLeft <= 0) return;
+    if (performance.now() > deadline) { timedOut = true; return; }
+    const neighbors = GRAPH.adjOut.get(current);
+    if (!neighbors) return;
+    for (const rxnNode of neighbors) {
+      if (timedOut || results.length >= MAX_PATHS) return;
+      if (excludedRxns.has(rxnNode)) continue; // SKIP excluded
+      const rn = GRAPH.nodes.get(rxnNode);
+      if (!rn || rn.type !== 'reaction') continue;
+      const rxnOut = GRAPH.adjOut.get(rxnNode);
+      if (!rxnOut) continue;
+      for (const product of rxnOut) {
+        if (timedOut || results.length >= MAX_PATHS) return;
+        if (visited.has(product)) continue;
+        const pn = GRAPH.nodes.get(product);
+        if (!pn || pn.type === 'reaction') continue;
+        const step = { from: current, rxn: rxnNode, to: product };
+        if (product === target) {
+          results.push([...path, step]);
+        } else if (stepsLeft > 1) {
+          visited.add(product);
+          dfs(product, target, visited, [...path, step], stepsLeft - 1);
+          visited.delete(product);
+        }
+      }
+    }
+  }
+
+  dfs(sourceId, targetId, new Set([sourceId]), [], maxSteps);
+  results.timedOut = timedOut;
+  return results;
+}
+
+// ---- EXPERIMENT RUNNER ----
+function runNecessityExperiment(preset) {
+  let targetId, ecHypothesis, maxSteps;
+
+  if (preset === 'geosmin') {
+    targetId = 'C16286';
+    ecHypothesis = '4.1.99';
+    maxSteps = 4;
+    document.getElementById('exp-target').value = 'C16286';
+    document.getElementById('exp-ec').value = '4.1.99';
+    document.getElementById('exp-steps').value = '4';
+    document.getElementById('exp-steps-val').textContent = '4';
+  } else {
+    targetId = document.getElementById('exp-target').value.trim();
+    ecHypothesis = document.getElementById('exp-ec').value.trim();
+    maxSteps = parseInt(document.getElementById('exp-steps').value) || 4;
+  }
+
+  if (!targetId) { alert('Please enter a target compound ID.'); return; }
+  if (!ecHypothesis) { alert('Please enter an EC hypothesis.'); return; }
+
+  const targetNode = GRAPH.nodes.get(targetId);
+  if (!targetNode) { alert('Target compound not found in graph. Build graph first.'); return; }
+
+  // Show progress
+  const el = document.getElementById('mainArea');
+  el.innerHTML = '<div class="answer-banner answer-banner-info">Running necessity experiment... (BFS reachability + sample path collection)</div>';
+
+  // Use setTimeout to allow the UI to update before computation
+  setTimeout(() => {
+    const t0 = performance.now();
+
+    // Phase 1: Necessity analysis (BFS reachability + sample paths)
+    const necessity = analyzeNecessity(targetId, ecHypothesis, maxSteps);
+    const t1 = performance.now();
+
+    // Phase 2: Minimal cut set (BFS-based)
+    const cutSet = findMinimalCutSet(targetId, maxSteps);
+    const t2 = performance.now();
+
+    // Phase 3: Counterfactual (BFS reachability + optional sample paths)
+    const counterfactual = counterfactualRemoveEC(targetId, ecHypothesis, maxSteps);
+    const t3 = performance.now();
+
+    const elapsed = (t3 - t0).toFixed(0);
+    const timingDetail = `necessity=${(t1-t0).toFixed(0)}ms, cutSet=${(t2-t1).toFixed(0)}ms, counterfactual=${(t3-t2).toFixed(0)}ms`;
+
+    // Render the report
+    renderNecessityReport({
+      targetId,
+      targetNode,
+      ecHypothesis,
+      maxSteps,
+      necessity,
+      cutSet,
+      counterfactual,
+      elapsed,
+      timingDetail,
+    });
+  }, 50);
+}
+
+// ---- REPORT RENDERER ----
+function renderNecessityReport(data) {
+  const el = document.getElementById('mainArea');
+  const { targetId, targetNode, ecHypothesis, maxSteps, necessity, cutSet, counterfactual, elapsed, timingDetail } = data;
+
+  const targetName = targetNode.name || targetId;
+  const targetOdors = (targetNode.odors || []).map(o => `<span class="odor-badge">${escapeHtml(o)}</span>`).join(' ');
+  const ecClassName = getEcClassName(ecHypothesis);
+  const ecLabel = ecClassName ? `${ecHypothesis} (${ecClassName})` : ecHypothesis;
+
+  let html = '';
+
+  // ---- Header ----
+  html += `<div class="answer-banner answer-banner-info" style="display:flex;justify-content:space-between;align-items:center;">
+    <span>Necessity Experiment: <strong>${escapeHtml(targetName)}</strong> (${escapeHtml(targetId)}) ${targetOdors}</span>
+    <span style="font-size:10px;opacity:0.7;">${elapsed}ms | ${necessity.reachableSources || '?'} sources | depth ${maxSteps}${timingDetail ? ' | ' + timingDetail : ''}</span>
+  </div>`;
+
+  // ==== SECTION 1: PROPOSITION ====
+  html += `<div class="report-section">
+    <div class="report-section-title">1. Proposition</div>
+    <div class="report-proposition">
+      "All metabolic paths (length &le; ${maxSteps}) from any odor compound to
+      <span class="cpd">${escapeHtml(targetName)}</span> must pass through
+      EC <span class="path-ec-badge">${escapeHtml(ecLabel)}</span>."
+    </div>
+    <div class="report-body">
+      <p>This is a <strong>universal claim</strong> (&#8704; paths). A single counterexample path that
+      reaches the target without this EC class would refute it.</p>
+    </div>
+  </div>`;
+
+  // ==== SECTION 2: EVIDENCE — REACHABILITY ANALYSIS ====
+  html += `<div class="report-section">
+    <div class="report-section-title">2. Evidence — Reachability Analysis
+      <span class="verdict ${(necessity.reachableSources || 0) > 0 ? 'verdict-true' : 'verdict-unknown'}">
+        ${necessity.reachableSources || 0} reachable source(s)
+      </span>
+    </div>
+    <div class="report-body">`;
+
+  if (!necessity.reachableSources) {
+    html += `<p>No odor compounds can reach <span class="cpd">${escapeHtml(targetId)}</span> within ${maxSteps} steps.
+    The target may be isolated or beyond the depth limit.</p>`;
+  } else {
+    html += `<p><strong>BFS reachability</strong> (O(V+E)): <strong>${necessity.reachableSources}</strong> odor compound(s) can reach the target within ${maxSteps} steps.</p>`;
+    if (necessity.ecReactionsRemoved !== undefined) {
+      html += `<p>After removing <strong>${necessity.ecReactionsRemoved}</strong> reaction(s) with EC ${escapeHtml(ecHypothesis)}: <strong>${necessity.reachableWithoutEC}</strong> source(s) remain reachable.</p>`;
+    }
+    if (necessity.sources.length > 0) {
+      html += `<p>Sample paths collected from ${necessity.sources.length} source(s)${necessity.sampleTimedOut ? ' (time-budgeted, may be incomplete)' : ''}:</p>`;
+      html += '<ul class="report-evidence-list">';
+      for (const src of necessity.sources.slice(0, 8)) {
+        const odorTags = src.odors.slice(0, 4).map(o => `<span class="odor-badge">${escapeHtml(o)}</span>`).join('');
+        html += `<li><span class="cpd">${escapeHtml(src.name)}</span> (${escapeHtml(src.id)}) ${odorTags} — ${src.paths.length} sample path(s)</li>`;
+      }
+      if (necessity.sources.length > 8) {
+        html += `<li class="neutral">...and ${necessity.sources.length - 8} more sources</li>`;
+      }
+      html += '</ul>';
+    }
+  }
+  html += '</div></div>';
+
+  // ==== SECTION 3: ENTAILMENT VERDICT ====
+  const isNecessary = necessity.verdict === 'NECESSARY';
+  html += `<div class="report-section">
+    <div class="report-section-title">3. Entailment Verdict
+      <span class="verdict ${isNecessary ? 'verdict-true' : 'verdict-false'}">
+        ${isNecessary ? 'NECESSARY (True)' : 'NOT NECESSARY (False)'}
+      </span>
+    </div>
+    <div class="report-body">`;
+
+  if (isNecessary) {
+    html += `<p><strong>BFS proof:</strong> Removing all ${necessity.ecReactionsRemoved || '?'} reaction(s) with EC
+    <span class="path-ec-badge">${escapeHtml(ecHypothesis)}</span> makes the target
+    <strong>unreachable from all ${necessity.reachableSources || '?'} odor compound source(s)</strong>.
+    Zero surviving routes.</p>
+    <p>Under the closed-world assumption (KEGG graph, depth &le; ${maxSteps}),
+    this EC class is a <strong>necessary condition</strong> for reaching ${escapeHtml(targetName)}.
+    This was proven by graph-theoretic reachability analysis, not path enumeration.</p>`;
+  } else {
+    html += `<p>After removing EC <span class="path-ec-badge">${escapeHtml(ecHypothesis)}</span> reactions,
+    <strong>${necessity.reachableWithoutEC || '?'} odor source(s) can still reach the target</strong>.</p>
+    <p>The hypothesis is <strong>refuted</strong>: bypass routes exist.</p>`;
+  }
+
+  html += '</div>';
+
+  // Show counterexamples if any
+  if (necessity.counterexamples.length > 0) {
+    for (let ci = 0; ci < necessity.counterexamples.length; ci++) {
+      const ce = necessity.counterexamples[ci];
+      html += `<div class="report-counter-path">
+        <div style="font-size:10px;color:var(--bad);margin-bottom:4px;">Counterexample ${ci + 1}: from ${escapeHtml(ce.source.name)} (${escapeHtml(ce.source.id)})</div>
+        ${renderSinglePathway(ce.path)}
+      </div>`;
+    }
+  }
+  html += '</div>';
+
+  // ==== SECTION 4: MINIMAL CUT SET ====
+  html += `<div class="report-section">
+    <div class="report-section-title">4. Minimal Cut Set (Minimal Explanation)
+      <span class="verdict ${cutSet.isSinglePoint ? 'verdict-true' : 'verdict-unknown'}">
+        ${cutSet.isSinglePoint ? 'Single point of failure' : `${cutSet.cutSet.length} EC(s) needed`}
+      </span>
+    </div>
+    <div class="report-body">
+      <p>The smallest set of EC classes whose removal makes
+      <span class="cpd">${escapeHtml(targetName)}</span> unreachable from all odor compounds:</p>`;
+
+  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;">';
+  for (const ec of cutSet.cutSet) {
+    const cn = getEcClassName(ec);
+    html += `<span class="report-cut-set"><span class="path-ec-badge">${escapeHtml(ec)}</span>${cn ? ' ' + escapeHtml(cn) : ''}</span>`;
+  }
+  html += '</div>';
+
+  if (cutSet.isSinglePoint) {
+    html += `<p>This is a <strong>single point of failure</strong>: removing just EC
+    <span class="path-ec-badge">${escapeHtml(cutSet.cutSet[0])}</span> is sufficient to
+    disconnect all ${cutSet.totalPaths} odor source(s) from the target.</p>`;
+    if (cutSet.allNecessary && cutSet.allNecessary.length > 1) {
+      html += `<p>All individually necessary ECs: ${cutSet.allNecessary.map(ec => `<span class="path-ec-badge">${escapeHtml(ec)}</span>`).join(' ')}</p>`;
+    }
+  } else {
+    html += `<p>No single EC disconnects the target. The greedy minimal set needs ${cutSet.cutSet.length} ECs
+    to block all ${cutSet.totalPaths} source(s).</p>`;
+  }
+
+  html += '</div></div>';
+
+  // ==== SECTION 5: COUNTERFACTUAL ====
+  html += `<div class="report-section">
+    <div class="report-section-title">5. Counterfactual Intervention
+      <span class="verdict ${counterfactual.reachable ? 'verdict-false' : 'verdict-true'}">
+        ${counterfactual.reachable ? 'Target still reachable (rescue exists)' : 'Target becomes unreachable'}
+      </span>
+    </div>
+    <div class="report-body">
+      <p><strong>Intervention:</strong> Remove all reactions catalyzed by EC
+      <span class="path-ec-badge">${escapeHtml(ecHypothesis)}</span>
+      (${counterfactual.excludedReactions} reaction node(s) excluded).</p>
+      <p><strong>Before:</strong> ${counterfactual.sourcesBefore || counterfactual.pathsBefore} reachable odor source(s).</p>
+      <p><strong>After:</strong> ${counterfactual.sourcesAfter || 0} reachable source(s)${counterfactual.pathsAfter > 0 ? `, ${counterfactual.pathsAfter} sample path(s)` : ''}.</p>`;
+
+  if (!counterfactual.reachable) {
+    html += `<p>Removing EC ${escapeHtml(ecHypothesis)} <strong>completely disconnects</strong> the
+    target from all odor compound sources (${counterfactual.sourcesBefore || '?'} → 0).
+    This confirms the necessity finding: the target compound's biosynthesis is entirely
+    dependent on this enzyme class.</p>`;
+  } else {
+    html += `<p>Even after removing EC ${escapeHtml(ecHypothesis)}, <strong>${counterfactual.sourcesAfter || '?'}
+    source(s) can still reach the target</strong> — indicating metabolic rescue / bypass routes exist:</p>`;
+    for (const src of counterfactual.survivingSources.slice(0, 3)) {
+      html += `<div class="report-counter-path">
+        <div style="font-size:10px;color:var(--warn);margin-bottom:4px;">Surviving: from ${escapeHtml(src.name)} (${escapeHtml(src.id)})</div>
+        ${renderSinglePathway(src.paths[0])}
+      </div>`;
+    }
+  }
+  html += '</div></div>';
+
+  // ==== SECTION 6: FALSIFIABLE HYPOTHESIS ====
+  html += `<div class="report-section">
+    <div class="report-section-title">6. Falsifiable Hypothesis & Experiment Design</div>
+    <div class="report-hypothesis">`;
+
+  if (isNecessary && !counterfactual.reachable) {
+    html += `<p><strong>Hypothesis:</strong> Knocking out or inhibiting all enzymes in EC class
+    <span class="path-ec-badge">${escapeHtml(ecHypothesis)}</span> will abolish production of
+    <span class="cpd">${escapeHtml(targetName)}</span> (${targetOdors}) in any organism
+    that produces it.</p>
+    <p><strong>Prediction:</strong> No compensatory / salvage pathway exists within
+    ${maxSteps} enzymatic steps in the KEGG-annotated metabolic network.</p>
+    <p><strong>How to falsify:</strong></p>
+    <ul style="margin:4px 0 4px 16px;font-size:11px;">
+      <li>Identify an organism producing ${escapeHtml(targetName)} without functional EC ${escapeHtml(ecHypothesis)} enzymes.</li>
+      <li>Perform gene knockout of EC ${escapeHtml(ecHypothesis)} homologs and test whether ${escapeHtml(targetName)} production persists.</li>
+      <li>Search for novel enzymatic routes not yet annotated in KEGG (the closed-world boundary).</li>
+    </ul>
+    <p><strong>Boundary conditions:</strong> Path length &le; ${maxSteps} steps; KEGG reaction annotation
+    as of current cache; ubiquitous cofactors excluded.</p>`;
+  } else if (!isNecessary) {
+    html += `<p><strong>Finding:</strong> EC ${escapeHtml(ecHypothesis)} is <strong>not necessary</strong>
+    for reaching ${escapeHtml(targetName)}. ${necessity.pathsWithoutEC} path(s) bypass it.</p>
+    <p><strong>Revised hypothesis:</strong> The bypass routes suggest metabolic redundancy.
+    To fully block ${escapeHtml(targetName)} production, one would need to simultaneously
+    inhibit the minimal cut set: ${cutSet.cutSet.map(ec => `<span class="path-ec-badge">${escapeHtml(ec)}</span>`).join(' + ')}.</p>`;
+  } else {
+    html += `<p><strong>Hypothesis:</strong> EC ${escapeHtml(ecHypothesis)} is necessary for
+    ${escapeHtml(targetName)} biosynthesis, yet ${counterfactual.pathsAfter} path(s) survive
+    the counterfactual removal. This suggests the surviving paths use reactions where EC
+    ${escapeHtml(ecHypothesis)} is one of multiple possible catalysts.</p>`;
+  }
+  html += '</div></div>';
+
+  // ==== SECTION 7: EC LANDSCAPE ====
+  if (necessity.ecFrequency.size > 0) {
+    html += `<div class="report-section">
+      <div class="report-section-title">7. EC Landscape (from sample paths)</div>
+      <div class="report-body">
+        <table class="ec-table">
+          <tr><th>EC</th><th>Class</th><th>Paths</th><th>Coverage</th><th>Necessary?</th></tr>`;
+    const sorted = [...necessity.ecFrequency.entries()].sort((a, b) => b[1].count - a[1].count);
+    for (const [ec, info] of sorted.slice(0, 20)) {
+      const pct = (info.count / necessity.totalPaths * 100).toFixed(1);
+      const cn = getEcClassName(ec);
+      const necBadge = info.inAll
+        ? '<span class="verdict verdict-true" style="font-size:9px;">YES</span>'
+        : '<span style="font-size:9px;color:var(--muted);">no</span>';
+      html += `<tr>
+        <td><span class="path-ec-badge">${escapeHtml(ec)}</span></td>
+        <td>${escapeHtml(cn)}</td>
+        <td>${info.count}</td>
+        <td>${pct}%</td>
+        <td>${necBadge}</td>
+      </tr>`;
+    }
+    if (sorted.length > 20) {
+      html += `<tr><td colspan="5" style="color:var(--muted);font-size:10px;">...${sorted.length - 20} more ECs</td></tr>`;
+    }
+    html += '</table></div></div>';
+  }
+
+  // ==== SECTION 8: SAMPLE PATHS ====
+  if (necessity.sources.length > 0 && necessity.totalPaths > 0) {
+    html += `<div class="report-section">
+      <div class="report-section-title">8. Sample Paths (first 3 sources)</div>`;
+    let shown = 0;
+    for (const src of necessity.sources.slice(0, 3)) {
+      const odorTags = src.odors.slice(0, 4).map(o => `<span class="odor-badge">${escapeHtml(o)}</span>`).join(' ');
+      html += `<div style="margin-bottom:8px;">
+        <div style="font-size:11px;margin-bottom:4px;">
+          <span class="cpd">${escapeHtml(src.name)}</span>
+          <span style="color:var(--muted);font-size:10px;">(${escapeHtml(src.id)})</span> ${odorTags}
+          — ${src.paths.length} path(s)
+        </div>`;
+      for (const path of src.paths.slice(0, 2)) {
+        html += renderSinglePathway(path);
+        shown++;
+      }
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+// --- Prolog Goal Proving ---
+
+function proveGoal(goal, subst, depth, ancestry, maxResults) {
+  if (depth > PROLOG_MAX_DEPTH) return [];
+  const goalResolved = applySubstToGoal(goal, subst);
+  const goalKey = termToString(goalResolved);
+  if (ancestry.has(goalKey)) return [];
+  const nextAncestry = new Set(ancestry);
+  nextAncestry.add(goalKey);
+
+  const solutions = [];
+
+  // Built-in: neq(A, B)
+  if (goal.pred === 'neq') {
+    const a = resolveTerm(goal.args[0], subst);
+    const b = resolveTerm(goal.args[1], subst);
+    if (a.type === 'const' && b.type === 'const' && a.value !== b.value) {
+      return [{ subst, trace: { type: 'builtin', goal: termToString(goalResolved), result: 'neq succeeded' } }];
+    }
+    return [];
+  }
+
+  // Built-in: path_search(Source, Target, MaxSteps, Path)
+  if (goal.pred === 'path_search') {
+    return provePathSearch(goal.args, subst, maxResults);
+  }
+
+  // Built-in: path_without(Source, Target, ExcludedRxn, Path)
+  if (goal.pred === 'path_without') {
+    return provePathWithout(goal.args, subst, maxResults);
+  }
+
+  // Virtual predicate matching — resolve directly from GRAPH, no pre-materialized facts
+  const virtualResolver = VIRTUAL_PREDICATES[goal.pred];
+  if (virtualResolver) {
+    const candidates = virtualResolver(goal.args, subst);
+    for (const cand of candidates) {
+      if (solutions.length >= maxResults) break;
+      const factTerm = { pred: goal.pred, args: cand.args.map(c) };
+      const s = unify(goal, factTerm, subst);
+      if (s) {
+        solutions.push({
+          subst: s,
+          trace: { type: 'fact', goal: termToString(goalResolved), fact: termToString(factTerm) },
+        });
+      }
+    }
+  }
+
+  // Rule matching
+  for (let i = 0; i < PROLOG_RULES.length; i++) {
+    if (solutions.length >= maxResults) break;
+    const baseRule = PROLOG_RULES[i];
+    if (baseRule.head.pred !== goal.pred) continue;
+    const rule = standardizeApart(baseRule, depth + '_' + i + '_' + Math.random().toString(36).slice(2, 6));
+    const s = unify(goal, rule.head, subst);
+    if (!s) continue;
+    const bodySolutions = proveGoals(rule.body, s, depth + 1, nextAncestry, maxResults - solutions.length);
+    for (const bs of bodySolutions) {
+      solutions.push({
+        subst: bs.subst,
+        trace: {
+          type: 'rule',
+          goal: termToString(goalResolved),
+          rule: ruleToString(baseRule),
+          subtraces: bs.traces,
+        },
+      });
+      if (solutions.length >= maxResults) break;
+    }
+  }
+  return solutions;
+}
+
+function proveGoals(goals, subst, depth, ancestry, maxResults) {
+  if (goals.length === 0) return [{ subst, traces: [] }];
+  const [first, ...rest] = goals;
+  const results = [];
+  const firstSols = proveGoal(first, subst, depth, ancestry, maxResults);
+  for (const fs of firstSols) {
+    if (results.length >= maxResults) break;
+    const restSols = proveGoals(rest, fs.subst, depth, ancestry, maxResults - results.length);
+    for (const rs of restSols) {
+      results.push({ subst: rs.subst, traces: [fs.trace, ...rs.traces] });
+      if (results.length >= maxResults) break;
+    }
+  }
+  return results;
+}
+
+function provePathSearch(args, subst, maxResults) {
+  const source = resolveTerm(args[0], subst);
+  const target = resolveTerm(args[1], subst);
+  const maxStepsT = resolveTerm(args[2], subst);
+  if (source.type !== 'const' || target.type !== 'const' || maxStepsT.type !== 'const') return [];
+  const maxSteps = parseInt(maxStepsT.value) || 3;
+  const paths = findAllPaths(source.value, target.value, maxSteps, null);
+  const results = [];
+  for (const path of paths) {
+    if (results.length >= maxResults) break;
+    const pathTerm = pathToListTerm(path);
+    const s = unify(args[3], pathTerm, subst);
+    if (s) {
+      results.push({
+        subst: s,
+        trace: {
+          type: 'builtin',
+          goal: `path_search(${source.value}, ${target.value}, ${maxSteps}, Path)`,
+          result: `Found path with ${path.length} step(s)`,
+          pathSteps: path,
+        },
+      });
+    }
+  }
+  return results;
+}
+
+function provePathWithout(args, subst, maxResults) {
+  const source = resolveTerm(args[0], subst);
+  const target = resolveTerm(args[1], subst);
+  const excluded = resolveTerm(args[2], subst);
+  if (source.type !== 'const' || target.type !== 'const' || excluded.type !== 'const') return [];
+  const paths = findAllPaths(source.value, target.value, 4, excluded.value);
+  const results = [];
+  for (const path of paths) {
+    if (results.length >= maxResults) break;
+    const pathTerm = pathToListTerm(path);
+    const s = unify(args[3], pathTerm, subst);
+    if (s) {
+      results.push({
+        subst: s,
+        trace: {
+          type: 'builtin',
+          goal: `path_without(${source.value}, ${target.value}, ${excluded.value}, Path)`,
+          result: `Found alternative path (${path.length} steps) excluding ${excluded.value}`,
+          pathSteps: path,
+        },
+      });
+    }
+  }
+  return results;
+}
+
+// --- Prolog Rules ---
+
+const PROLOG_RULES = [
+  {
+    name: 'one_step',
+    display: 'one_step(A, B, Rxn) :- edge(A, Rxn), edge(Rxn, B), neq(A, B).',
+    head: { pred: 'one_step', args: [v('A'), v('B'), v('Rxn')] },
+    body: [
+      { pred: 'edge', args: [v('A'), v('Rxn')] },
+      { pred: 'edge', args: [v('Rxn'), v('B')] },
+      { pred: 'neq', args: [v('A'), v('B')] },
+    ],
+  },
+  {
+    name: 'one_step_ec',
+    display: 'one_step_ec(A, B, Rxn, EC) :- one_step(A, B, Rxn), reaction_ec(Rxn, EC).',
+    head: { pred: 'one_step_ec', args: [v('A'), v('B'), v('Rxn'), v('EC')] },
+    body: [
+      { pred: 'one_step', args: [v('A'), v('B'), v('Rxn')] },
+      { pred: 'reaction_ec', args: [v('Rxn'), v('EC')] },
+    ],
+  },
+  {
+    name: 'ec_connects',
+    display: 'ec_connects(EC, OdorA, OdorB) :- one_step_ec(CA, CB, _, EC), compound_odor(CA, OdorA), compound_odor(CB, OdorB).',
+    head: { pred: 'ec_connects', args: [v('EC'), v('OdorA'), v('OdorB')] },
+    body: [
+      { pred: 'one_step_ec', args: [v('CA'), v('CB'), v('_'), v('EC')] },
+      { pred: 'compound_odor', args: [v('CA'), v('OdorA')] },
+      { pred: 'compound_odor', args: [v('CB'), v('OdorB')] },
+    ],
+  },
+  {
+    name: 'can_transform',
+    display: 'can_transform(OdorA, OdorB) :- compound_odor(CA, OdorA), compound_odor(CB, OdorB), neq(CA, CB), path_search(CA, CB, 4, _).',
+    head: { pred: 'can_transform', args: [v('OdorA'), v('OdorB')] },
+    body: [
+      { pred: 'compound_odor', args: [v('CA'), v('OdorA')] },
+      { pred: 'compound_odor', args: [v('CB'), v('OdorB')] },
+      { pred: 'neq', args: [v('CA'), v('CB')] },
+      { pred: 'path_search', args: [v('CA'), v('CB'), c('4'), v('_Path')] },
+    ],
+  },
+];
+
+const PROLOG_PREDICATES = new Set([
+  'edge', 'reaction_ec', 'compound_odor', 'compound_name', 'odor_compound',
+  'one_step', 'one_step_ec', 'ec_connects', 'can_transform',
+  'path_search', 'path_without',
+  'neq',
+]);
+
+// =========================================================================
+// MODULE 4: QUERY PARSER
+// =========================================================================
+
+function parseQuery(text) {
+  text = text.trim();
+  if (text.startsWith('?-')) text = text.slice(2).trim();
+  if (text.endsWith('.')) text = text.slice(0, -1).trim();
+
+  // Handle A \= B syntax -> neq(A, B)
+  const neqMatch = text.match(/^(\w+)\s*\\=\s*(\w+)$/);
+  if (neqMatch) {
+    return {
+      predicate: 'neq',
+      args: classifyArgs([neqMatch[1], neqMatch[2]]),
+    };
+  }
+
+  // Match: predicate(arg1, arg2, ...)
+  const m = text.match(/^(\w+)\((.+)\)$/s);
+  if (!m) return null;
+  const pred = m[1];
+  const argsRaw = m[2];
+  const args = [];
+  let depth = 0, cur = '';
+  for (const ch of argsRaw) {
+    if (ch === '[' || ch === '(') depth++;
+    if (ch === ']' || ch === ')') depth--;
+    if (ch === ',' && depth === 0) { args.push(cur.trim()); cur = ''; }
+    else cur += ch;
+  }
+  if (cur.trim()) args.push(cur.trim());
+
+  return { predicate: pred, args: classifyArgs(args) };
+}
+
+function classifyArgs(args) {
+  return args.map(a => {
+    if (a.startsWith('[')) return { type: 'list', value: a };
+    if (a === '_' || (a[0] === a[0].toUpperCase() && /^[A-Z]/.test(a)) || a.startsWith('_')) {
+      return { type: 'var', name: a };
+    }
+    // Numeric
+    if (/^\d+$/.test(a)) return { type: 'const', value: a };
+    return { type: 'const', value: a };
+  });
+}
+
+function buildPrologGoalFromQuery(q) {
+  const args = [];
+  for (const a of q.args) {
+    if (a.type === 'list') return { error: 'Lists are not supported as direct input.' };
+    if (a.type === 'var') args.push({ type: 'var', name: a.name });
+    else args.push({ type: 'const', value: String(a.value) });
+  }
+  return { pred: q.predicate, args };
+}
+
+function extractBindings(q, subst) {
+  const bindings = {};
+  for (const a of q.args) {
+    if (a.type !== 'var') continue;
+    if (a.name === '_' || a.name.startsWith('_')) continue;
+    const term = resolveTerm({ type: 'var', name: a.name }, subst);
+    if (term.type !== 'var') bindings[a.name] = termToString(term);
+  }
+  return bindings;
+}
+
+function runPrologQuery(q, limit) {
+  const goal = buildPrologGoalFromQuery(q);
+  if (goal.error) return { error: goal.error, solutions: [] };
+  const maxResults = Math.min(limit, PROLOG_MAX_RESULTS);
+  const sols = proveGoal(goal, {}, 0, new Set(), maxResults);
+  return {
+    solutions: sols.map(s => ({
+      bindings: extractBindings(q, s.subst),
+      trace: s.trace,
+    })),
+    truncated: sols.length >= maxResults,
+  };
+}
+
+// =========================================================================
+// MODULE 5: UI & FILE LOADING
+// =========================================================================
+
+function setStatus(key, state, text) {
+  const el = document.getElementById('st-' + key);
+  el.className = 'status status-' + state;
+  el.textContent = text || state;
+}
+
+function pickFile(key) { document.getElementById('fi-' + key).click(); }
+
+function loadLocalFile(input, key) {
+  const file = input.files[0];
+  if (!file) return;
+  setStatus(key, 'loading', 'loading...');
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      storeRawData(key, e.target.result);
+      setStatus(key, 'loaded', 'loaded');
+    } catch (err) {
+      setStatus(key, 'error', 'parse error');
+      console.error('Parse error for', key, err);
+    }
+  };
+  reader.onerror = () => setStatus(key, 'error', 'read error');
+  reader.readAsText(file);
+}
+
+function storeRawData(key, text) {
+  if (key === 'tsv') {
+    const r = parseCompoundReactionTSV(text);
+    RAW.compoundReactionTSV = true;
+    setStatus(key, 'loaded', `loaded (${r.compounds} cpd, ${r.reactions} rxn)`);
+  } else if (key === 'rxncache') {
+    const r = parseReactionCache(text);
+    RAW.reactionCache = true;
+    setStatus(key, 'loaded', `loaded (${r.reactions} rxn)`);
+  } else if (key === 'mainpairs') {
+    const r = parseMainPairs(text);
+    RAW.mainPairs = true;
+    setStatus(key, 'loaded', `loaded (${r.reactions} rxn)`);
+  } else if (key === 'tgsc') {
+    const r = parseTGSC(text);
+    RAW.tgscCSV = true;
+    setStatus(key, 'loaded', `loaded (${r.compounds} cpd)`);
+  } else if (key === 'echier') {
+    const r = parseEcHierarchy(text);
+    RAW.ecHierarchy = true;
+    setStatus(key, 'loaded', `loaded (${r.sections} sections)`);
+  }
+  checkBuildReady();
+}
+
+function checkBuildReady() {
+  const ready = RAW.compoundReactionTSV && RAW.reactionCache && RAW.tgscCSV;
+  document.getElementById('buildBtn').disabled = !ready;
+}
+
+async function autoFetch() {
+  const files = [
+    ['tsv', '../kegg_cache/compound_reaction_links.tsv'],
+    ['rxncache', '../kegg_cache/complete_reaction_cache.json'],
+    ['mainpairs', '../kegg_cache/rclass_verification/main_pairs.json'],
+    ['tgsc', '../tgsc_to_kegg.csv'],
+    ['echier', '../kegg_cache/ec_section_hierarchy.json'],
+  ];
+  for (const [key, path] of files) {
+    setStatus(key, 'loading', 'fetching...');
+    try {
+      const resp = await fetch(path);
+      if (!resp.ok) throw new Error(resp.status);
+      const text = await resp.text();
+      storeRawData(key, text);
+    } catch (e) {
+      setStatus(key, 'error', 'fetch failed');
+      console.error('Fetch failed for', key, e);
+    }
+  }
+}
+
+function onBuildGraph() {
+  const depth = parseInt(document.getElementById('depthSlider').value) || 2;
+  const useMainPairs = document.getElementById('useMainPairs').checked;
+
+  const bar = document.getElementById('progressBar');
+  const fill = document.getElementById('progressFill');
+  bar.style.display = 'block';
+  fill.style.width = '20%';
+
+  setTimeout(() => {
+    fill.style.width = '50%';
+    const stats = buildGraph(depth, useMainPairs);
+    fill.style.width = '80%';
+
+    setTimeout(() => {
+      buildGraphIndices();
+      const virtualFactCount = countVirtualFacts();
+      fill.style.width = '100%';
+
+      updateTopStats(virtualFactCount);
+      populateOdorDropdowns();
+
+      setTimeout(() => {
+        bar.style.display = 'none';
+        fill.style.width = '0%';
+      }, 500);
+
+      // Show success in canvas
+      const el = document.getElementById('mainArea');
+      el.innerHTML = `<div class="answer-banner answer-banner-yes">
+        Graph built successfully: ${stats.nodes} nodes, ${stats.edges} edges, ${stats.odorCompounds} odor compounds, ${stats.reactions} reactions. Virtual predicates: ${virtualFactCount} addressable facts (zero pre-materialized).
+      </div>
+      <div class="empty">
+        <h3>Graph ready for queries</h3>
+        <p>Use the Constraint Builder or Query Studio to explore odor transformations.</p>
+      </div>`;
+    }, 50);
+  }, 50);
+}
+
+function updateTopStats(factCount) {
+  document.getElementById('stat-nodes').textContent = GRAPH.stats.nodes || 0;
+  document.getElementById('stat-edges').textContent = GRAPH.stats.edges || 0;
+  document.getElementById('stat-odor-cpds').textContent = GRAPH.stats.odorCompounds || 0;
+  document.getElementById('stat-rxns').textContent = GRAPH.stats.reactions || 0;
+  document.getElementById('stat-facts').textContent = factCount || 0;
+}
+
+function populateOdorDropdowns() {
+  const fromSel = document.getElementById('cb-from');
+  const toSel = document.getElementById('cb-to');
+  fromSel.innerHTML = '<option value="">-- select odor --</option>';
+  toSel.innerHTML = '<option value="">-- select odor --</option>';
+  for (const odor of GRAPH.allOdors) {
+    fromSel.innerHTML += `<option value="${escapeHtml(odor)}">${escapeHtml(odor)}</option>`;
+    toSel.innerHTML += `<option value="${escapeHtml(odor)}">${escapeHtml(odor)}</option>`;
+  }
+}
+
+// =========================================================================
+// MODULE 6: RESULT RENDERING
+// =========================================================================
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return String(text).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderResults(result) {
+  const el = document.getElementById('mainArea');
+  let html = '';
+
+  if (result.error) {
+    html += `<div class="answer-banner answer-banner-no">${escapeHtml(result.error)}</div>`;
+    el.innerHTML = html;
+    return;
+  }
+
+  const prologResult = result.prologResults;
+  if (!prologResult) {
+    el.innerHTML = '<div class="answer-banner answer-banner-no">No results.</div>';
+    return;
+  }
+
+  if (prologResult.error) {
+    html += `<div class="answer-banner answer-banner-no">${escapeHtml(prologResult.error)}</div>`;
+    el.innerHTML = html;
+    return;
+  }
+
+  // Answer banner
+  const solCount = prologResult.solutions.length;
+  if (solCount > 0) {
+    html += renderAnswerBanner(result);
+  } else {
+    html += '<div class="answer-banner answer-banner-no">No proof found within depth limit.</div>';
+  }
+
+  if (prologResult.truncated) {
+    html += '<div class="rule-meta" style="color:var(--warn);margin-bottom:12px;">Results truncated by limit.</div>';
+  }
+
+  if (solCount === 0) {
+    el.innerHTML = html;
+    return;
+  }
+
+  // Collect all path steps from all solutions for pathway visualization and EC analysis
+  const allPathSteps = [];
+  const ecFrequency = new Map();
+
+  html += '<section class="result-block">';
+  html += `<div class="section-title"><h2>Results</h2><span class="pill">${solCount} solution(s)</span></div>`;
+  html += '<div class="result-grid">';
+
+  for (let i = 0; i < solCount; i++) {
+    const sol = prologResult.solutions[i];
+    html += `<div class="result-card">`;
+    html += `<h4>Solution ${i + 1}</h4>`;
+    html += renderBindings(sol.bindings);
+
+    // Check if trace has pathSteps (from path_search / path_without)
+    const pathSteps = collectPathSteps(sol.trace);
+    if (pathSteps.length > 0) {
+      for (const path of pathSteps) {
+        html += renderSinglePathway(path);
+        allPathSteps.push(path);
+        // Collect EC info
+        for (const step of path) {
+          const rxnNode = GRAPH.nodes.get(step.rxn);
+          if (rxnNode && rxnNode.ec3) {
+            for (const ec of rxnNode.ec3) {
+              ecFrequency.set(ec, (ecFrequency.get(ec) || 0) + 1);
+            }
+          }
+        }
+      }
+    }
+
+    // Collapsible proof trace
+    const traceId = 'trace-' + i;
+    html += `<div style="margin-top:8px;">
+      <span class="collapsible-toggle" onclick="toggleCollapsible('${traceId}')">
+        <span id="${traceId}-arrow">&#9654;</span> Proof trace
+      </span>
+      <div class="collapsible-content" id="${traceId}">
+        <div class="trace-tree" style="margin-top:6px;">
+          ${renderTraceNode(sol.trace, 0, true)}
+        </div>
+      </div>
+    </div>`;
+
+    html += '</div>';
+  }
+  html += '</div></section>';
+
+  // EC Analysis section if we have path data
+  if (ecFrequency.size > 0) {
+    html += renderECAnalysis(ecFrequency);
+  }
+
+  // Apply EC filter note if applicable
+  if (result.ecFilter) {
+    html += `<div class="rule-meta" style="margin-top:8px;">EC filter applied: only paths through EC ${escapeHtml(result.ecFilter)} are shown.</div>`;
+  }
+
+  el.innerHTML = html;
+}
+
+function renderAnswerBanner(result) {
+  const solCount = result.prologResults.solutions.length;
+  const q = result.query;
+  if (!q) {
+    return `<div class="answer-banner answer-banner-yes">${solCount} solution(s) found.</div>`;
+  }
+
+  // Generate natural language summary
+  if (q.predicate === 'can_transform') {
+    const from = q.args[0], to = q.args[1];
+    if (from.type === 'const' && to.type === 'const') {
+      return `<div class="answer-banner answer-banner-yes">Yes, <span class="odor">${escapeHtml(from.value)}</span> can transform to <span class="odor">${escapeHtml(to.value)}</span> via ${solCount} pathway(s).</div>`;
+    }
+    if (from.type === 'const' && to.type === 'var') {
+      const targets = [...new Set(result.prologResults.solutions.map(s => s.bindings[to.name]).filter(Boolean))];
+      return `<div class="answer-banner answer-banner-info"><span class="odor">${escapeHtml(from.value)}</span> can transform to ${targets.length} different odor(s): ${targets.slice(0, 10).map(t => `<span class="odor">${escapeHtml(t)}</span>`).join(', ')}${targets.length > 10 ? '...' : ''}</div>`;
+    }
+  }
+  if (q.predicate === 'path_search' || q.predicate === 'path_without') {
+    return `<div class="answer-banner answer-banner-yes">${solCount} path(s) found.</div>`;
+  }
+  if (q.predicate === 'ec_connects') {
+    return `<div class="answer-banner answer-banner-info">${solCount} odor pair(s) connected by this EC.</div>`;
+  }
+  return `<div class="answer-banner answer-banner-yes">${solCount} solution(s) found.</div>`;
+}
+
+function collectPathSteps(trace) {
+  const paths = [];
+  if (!trace) return paths;
+  if (trace.pathSteps) {
+    paths.push(trace.pathSteps);
+  }
+  if (trace.subtraces) {
+    for (const st of trace.subtraces) {
+      paths.push(...collectPathSteps(st));
+    }
+  }
+  return paths;
+}
+
+function renderSinglePathway(steps) {
+  if (!steps || steps.length === 0) return '';
+  let html = '<div class="path-viz">';
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    html += '<div class="path-step-row">';
+
+    // From compound
+    if (i === 0) {
+      html += renderCompoundNode(step.from);
+    }
+
+    // Arrow with reaction
+    html += renderReactionArrow(step.rxn);
+
+    // To compound
+    html += renderCompoundNode(step.to);
+
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function renderCompoundNode(id) {
+  const node = GRAPH.nodes.get(id);
+  if (!node) return `<span class="path-node path-node-intermediate"><span class="cpd-name">${escapeHtml(id)}</span></span>`;
+
+  const isOdor = node.type === 'odor_compound';
+  const cls = isOdor ? 'path-node-odor' : 'path-node-intermediate';
+  let html = `<span class="path-node ${cls}">`;
+  html += `<span class="cpd-name">${escapeHtml(node.name || id)}</span>`;
+  html += `<span class="cpd-id">${escapeHtml(id)}</span>`;
+  if (isOdor && node.odors && node.odors.length > 0) {
+    html += '<span style="margin-top:2px;">';
+    for (const o of node.odors.slice(0, 5)) {
+      html += `<span class="odor-badge">${escapeHtml(o)}</span>`;
+    }
+    if (node.odors.length > 5) html += `<span class="odor-badge">+${node.odors.length - 5}</span>`;
+    html += '</span>';
+  }
+  html += '</span>';
+  return html;
+}
+
+function renderReactionArrow(rxnNodeId) {
+  const node = GRAPH.nodes.get(rxnNodeId);
+  const rxnId = node ? (node.rxnId || rxnNodeId) : rxnNodeId;
+  const ecs = node ? (node.ec3 || []) : [];
+
+  let html = '<span class="path-arrow">&#8594;</span>';
+  html += '<span class="path-rxn-badge">';
+  html += `<span class="rxn-id">${escapeHtml(rxnId)}</span>`;
+  for (const ec of ecs) {
+    const className = getEcClassName(ec);
+    const label = className ? `${ec} (${className})` : ec;
+    html += `<span class="ec-label">${escapeHtml(label)}</span>`;
+  }
+  html += '</span>';
+  html += '<span class="path-arrow">&#8594;</span>';
+  return html;
+}
+
+function renderECAnalysis(ecFrequency) {
+  let html = '<section class="result-block">';
+  html += '<div class="section-title"><h2>EC Analysis</h2>';
+  html += `<span class="pill">${ecFrequency.size} EC(s)</span></div>`;
+  html += '<div class="result-card">';
+  html += '<table class="ec-table">';
+  html += '<tr><th>EC Number</th><th>Enzyme Class</th><th>Frequency</th></tr>';
+  const sorted = [...ecFrequency.entries()].sort((a, b) => b[1] - a[1]);
+  for (const [ec, count] of sorted) {
+    const className = getEcClassName(ec);
+    html += `<tr>
+      <td><span class="path-ec-badge">${escapeHtml(ec)}</span></td>
+      <td>${escapeHtml(className)}</td>
+      <td>${count}</td>
+    </tr>`;
+  }
+  html += '</table></div></section>';
+  return html;
+}
+
+function renderBindings(bindings) {
+  const keys = Object.keys(bindings || {});
+  if (!keys.length) return '<div class="rule-meta">Ground query (no variables).</div>';
+  const parts = keys.map(k => {
+    let val = bindings[k];
+    // Clean internal variable names
+    if (typeof val === 'string' && /_\d+_\d+/.test(val)) val = '_';
+    return `<span><strong>${escapeHtml(k)}</strong> = ${escapeHtml(val)}</span>`;
+  });
+  return `<div class="rule-meta" style="line-height:1.8;">${parts.join(' &nbsp; ')}</div>`;
+}
+
+function renderTraceNode(node, depth, isRoot) {
+  if (!node) return '';
+  const rootClass = isRoot ? ' trace-node-root' : '';
+
+  if (node.type === 'fact') {
+    const factSemantic = renderSemanticPredicate(node.fact);
+    return `<div class="trace-node${rootClass}">
+      <span class="trace-icon trace-icon-fact">&#10003;</span>
+      <span class="trace-semantic trace-fact-text">${factSemantic}</span>
+    </div>`;
+  }
+
+  if (node.type === 'builtin') {
+    return `<div class="trace-node${rootClass}">
+      <span class="trace-icon trace-icon-builtin">&#9889;</span>
+      <span class="trace-semantic" style="color:var(--accent-3);">${escapeHtml(node.result || node.goal)}</span>
+    </div>`;
+  }
+
+  if (node.type === 'rule') {
+    const goalSemantic = renderSemanticPredicate(node.goal);
+    let html = `<div class="trace-node${rootClass}">
+      <span class="trace-icon trace-icon-rule">&#8594;</span>
+      <span class="trace-semantic trace-goal">${goalSemantic}</span>
+      <div class="trace-rule-text">${escapeHtml(node.rule)}</div>`;
+    for (const st of (node.subtraces || [])) {
+      html += renderTraceNode(st, depth + 1);
+    }
+    html += '</div>';
+    return html;
+  }
+  return '';
+}
+
+function renderSemanticPredicate(predStr) {
+  const parsed = parsePredicateString(predStr);
+  if (!parsed) return escapeHtml(predStr);
+  const a = parsed.args.map(escapeHtml);
+  switch (parsed.pred) {
+    case 'edge':
+      return `<span class="cpd">${a[0]}</span> &#8594; <span class="cpd">${a[1]}</span>`;
+    case 'reaction_ec':
+      return `<span class="rxn">${a[0]}</span> has EC <span class="ec">${a[1]}</span>`;
+    case 'compound_odor':
+      return `<span class="cpd">${a[0]}</span> has odor <span class="odor">${a[1]}</span>`;
+    case 'compound_name':
+      return `<span class="cpd">${a[0]}</span> is named <span class="odor">${a[1]}</span>`;
+    case 'odor_compound':
+      return `<span class="cpd">${a[0]}</span> is an odor compound`;
+    case 'one_step':
+      return `<span class="cpd">${a[0]}</span> &#8594;[<span class="rxn">${a[2]}</span>]&#8594; <span class="cpd">${a[1]}</span>`;
+    case 'one_step_ec':
+      return `<span class="cpd">${a[0]}</span> &#8594;[<span class="rxn">${a[2]}</span> | EC <span class="ec">${a[3]}</span>]&#8594; <span class="cpd">${a[1]}</span>`;
+    case 'ec_connects':
+      return `EC <span class="ec">${a[0]}</span> connects odor <span class="odor">${a[1]}</span> to <span class="odor">${a[2]}</span>`;
+    case 'can_transform':
+      return `odor <span class="odor">${a[0]}</span> can transform to <span class="odor">${a[1]}</span>`;
+    case 'path_search':
+      return `path from <span class="cpd">${a[0]}</span> to <span class="cpd">${a[1]}</span> (max ${a[2]} steps)`;
+    case 'path_without':
+      return `path from <span class="cpd">${a[0]}</span> to <span class="cpd">${a[1]}</span> excluding <span class="rxn">${a[2]}</span>`;
+    case 'neq':
+      return `<span class="cpd">${a[0]}</span> &#8800; <span class="cpd">${a[1]}</span>`;
+    default:
+      return cleanPredicateDisplay(predStr);
+  }
+}
+
+function parsePredicateString(text) {
+  if (!text || typeof text !== 'string') return null;
+  const m = text.match(/^([a-zA-Z_]\w*)\((.+)\)$/s);
+  if (!m) return null;
+  const pred = m[1];
+  const raw = m[2];
+  const args = [];
+  let depth = 0, cur = '';
+  for (const ch of raw) {
+    if (ch === '(' || ch === '[') depth++;
+    if (ch === ')' || ch === ']') depth--;
+    if (ch === ',' && depth === 0) { args.push(cur.trim()); cur = ''; }
+    else cur += ch;
+  }
+  if (cur.trim()) args.push(cur.trim());
+  return { pred, args };
+}
+
+function cleanPredicateDisplay(text) {
+  const parsed = parsePredicateString(text);
+  if (!parsed) return escapeHtml(text);
+  const args = parsed.args.map(arg => {
+    if (/^[A-Z_]/.test(arg)) {
+      if (/_\d+_\d+/.test(arg)) return '_';
+      return arg.replace(/_\d+_\d+.*$/, '');
+    }
+    return arg;
+  });
+  return `${parsed.pred}(${args.join(', ')})`;
+}
+
+function toggleCollapsible(id) {
+  const el = document.getElementById(id);
+  const arrow = document.getElementById(id + '-arrow');
+  if (el.classList.contains('open')) {
+    el.classList.remove('open');
+    if (arrow) arrow.innerHTML = '&#9654;';
+  } else {
+    el.classList.add('open');
+    if (arrow) arrow.innerHTML = '&#9660;';
+  }
+}
+
+// =========================================================================
+// MODULE 7: CONSTRAINT BUILDER LOGIC
+// =========================================================================
+
+function onFindTransformations() {
+  const fromOdor = document.getElementById('cb-from').value;
+  const toOdor = document.getElementById('cb-to').value;
+  const mustEC = document.getElementById('cb-ec').value.trim();
+  const exclude = document.getElementById('cb-exclude').value.trim();
+  const maxSteps = parseInt(document.getElementById('cb-steps').value) || 3;
+
+  if (!fromOdor || !toOdor) {
+    alert('Please select both From and To odors.');
+    return;
+  }
+
+  // Find compound pairs
+  const fromCpds = [];
+  const toCpds = [];
+  for (const cpd of GRAPH.odorCompounds) {
+    const node = GRAPH.nodes.get(cpd);
+    if (!node) continue;
+    if (node.odors.includes(fromOdor)) fromCpds.push(cpd);
+    if (node.odors.includes(toOdor)) toCpds.push(cpd);
+  }
+
+  if (fromCpds.length === 0 || toCpds.length === 0) {
+    renderResults({ prologResults: { solutions: [], error: null }, query: null, error: `No compounds found for odor pair: ${fromOdor} -> ${toOdor}` });
+    return;
+  }
+
+  // Find all paths between compound pairs
+  const allSolutions = [];
+  const excludeRxn = exclude ? ('R_' + exclude.replace(/^R_/, '')) : null;
+
+  for (const src of fromCpds) {
+    for (const tgt of toCpds) {
+      if (src === tgt) continue;
+      const paths = findAllPaths(src, tgt, maxSteps, excludeRxn);
+      for (const path of paths) {
+        // EC filter
+        if (mustEC) {
+          const hasEC = path.some(step => {
+            const rxnNode = GRAPH.nodes.get(step.rxn);
+            return rxnNode && rxnNode.ec3 && rxnNode.ec3.some(ec => ec === mustEC || ec.startsWith(mustEC));
+          });
+          if (!hasEC) continue;
+        }
+        allSolutions.push({
+          bindings: { Source: src, Target: tgt },
+          trace: {
+            type: 'builtin',
+            goal: `path(${src}, ${tgt}, ${maxSteps})`,
+            result: `Path: ${src} -> ${tgt} (${path.length} steps)`,
+            pathSteps: path,
+          },
+        });
+        if (allSolutions.length >= 50) break;
+      }
+      if (allSolutions.length >= 50) break;
+    }
+    if (allSolutions.length >= 50) break;
+  }
+
+  const fakeQuery = {
+    predicate: 'can_transform',
+    args: [{ type: 'const', value: fromOdor }, { type: 'const', value: toOdor }],
+  };
+
+  renderResults({
+    query: fakeQuery,
+    prologResults: {
+      solutions: allSolutions,
+      truncated: allSolutions.length >= 50,
+    },
+    ecFilter: mustEC || null,
+  });
+}
+
+function onReachability() {
+  const fromOdor = document.getElementById('cb-from').value;
+  const maxSteps = parseInt(document.getElementById('cb-steps').value) || 3;
+
+  if (!fromOdor) {
+    alert('Please select a From odor.');
+    return;
+  }
+
+  // Generate Prolog query
+  const queryText = `?- compound_odor(C, ${fromOdor}), path_search(C, T, ${maxSteps}, _), compound_odor(T, Odor).`;
+  document.getElementById('queryInput').value = queryText;
+  runQuery();
+}
+
+function onECAnalysis() {
+  const ec = document.getElementById('cb-ec').value.trim();
+  if (!ec) {
+    alert('Please enter an EC number in the Must EC field.');
+    return;
+  }
+  const queryText = `?- ec_connects(${ec}, OdorA, OdorB).`;
+  document.getElementById('queryInput').value = queryText;
+  runQuery();
+}
+
+function onCounterfactual() {
+  const fromOdor = document.getElementById('cb-from').value;
+  const toOdor = document.getElementById('cb-to').value;
+  const exclude = document.getElementById('cb-exclude').value.trim();
+
+  if (!fromOdor || !toOdor || !exclude) {
+    alert('Please select From, To odors and specify an Exclude reaction.');
+    return;
+  }
+
+  // Use direct path search with exclusion
+  const fromCpds = [];
+  const toCpds = [];
+  for (const cpd of GRAPH.odorCompounds) {
+    const node = GRAPH.nodes.get(cpd);
+    if (!node) continue;
+    if (node.odors.includes(fromOdor)) fromCpds.push(cpd);
+    if (node.odors.includes(toOdor)) toCpds.push(cpd);
+  }
+
+  if (fromCpds.length === 0 || toCpds.length === 0) {
+    alert('No compounds found for the selected odors.');
+    return;
+  }
+
+  // Use the first pair for direct query
+  const excludeId = 'R_' + exclude.replace(/^R_/, '');
+  const queryText = `?- path_without(${fromCpds[0]}, ${toCpds[0]}, ${excludeId}, Path).`;
+  document.getElementById('queryInput').value = queryText;
+  runQuery();
+}
+
+// =========================================================================
+// QUERY EXECUTION GLUE
+// =========================================================================
+
+function setQuery(text) {
+  document.getElementById('queryInput').value = text;
+}
+
+function runQuery() {
+  const text = document.getElementById('queryInput').value.trim();
+  if (!text) return;
+
+  // Handle multi-goal queries (comma-separated after ?-)
+  let queryText = text;
+  if (queryText.startsWith('?-')) queryText = queryText.slice(2).trim();
+  if (queryText.endsWith('.')) queryText = queryText.slice(0, -1).trim();
+
+  // Check if it's a multi-goal query
+  const goals = parseMultiGoals(queryText);
+  if (goals && goals.length > 1) {
+    runMultiGoalQuery(goals, text);
+    return;
+  }
+
+  const q = parseQuery(text);
+  if (!q) {
+    alert('Could not parse query. Use: ?- predicate(arg1, arg2, ...).');
+    return;
+  }
+
+  if (!PROLOG_PREDICATES.has(q.predicate)) {
+    alert(`Unknown predicate: ${q.predicate}. Known predicates: ${[...PROLOG_PREDICATES].join(', ')}`);
+    return;
+  }
+
+  const prologResults = runPrologQuery(q, PROLOG_MAX_RESULTS);
+  renderResults({ query: q, prologResults });
+}
+
+function findAll() {
+  const text = document.getElementById('queryInput').value.trim();
+  if (!text) return;
+  const q = parseQuery(text);
+  if (!q) { alert('Parse error'); return; }
+  const prologResults = runPrologQuery(q, 500);
+  renderResults({ query: q, prologResults });
+}
+
+function clearResults() {
+  const el = document.getElementById('mainArea');
+  el.innerHTML = '<div class="empty"><h3>Results cleared</h3><p>Enter a new query to see proofs and evidence.</p></div>';
+}
+
+// Multi-goal query support
+function parseMultiGoals(text) {
+  // Split by comma at top level (not inside parens)
+  const goals = [];
+  let depth = 0, cur = '';
+  for (const ch of text) {
+    if (ch === '(' || ch === '[') depth++;
+    if (ch === ')' || ch === ']') depth--;
+    if (ch === ',' && depth === 0) {
+      const g = cur.trim();
+      if (g) goals.push(g);
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  if (cur.trim()) goals.push(cur.trim());
+
+  // Only treat as multi-goal if we have multiple goals AND at least one contains a predicate call
+  if (goals.length <= 1) return null;
+  // Verify each is parseable
+  for (const g of goals) {
+    if (!parseQuery(g)) return null;
+  }
+  return goals;
+}
+
+function runMultiGoalQuery(goalTexts, originalText) {
+  // Parse each goal into a Prolog term
+  const parsedGoals = goalTexts.map(g => {
+    const q = parseQuery(g);
+    return buildPrologGoalFromQuery(q);
+  });
+
+  // Check for errors
+  for (const pg of parsedGoals) {
+    if (pg.error) {
+      alert(pg.error);
+      return;
+    }
+  }
+
+  // Run conjunctive query
+  const goalTerms = parsedGoals.map(pg => ({ pred: pg.pred, args: pg.args }));
+  const solutions = proveGoals(goalTerms, {}, 0, new Set(), PROLOG_MAX_RESULTS);
+
+  // Extract bindings: collect all variable names from all goals
+  const allVarNames = new Set();
+  for (const gt of goalTexts) {
+    const q = parseQuery(gt);
+    if (q) {
+      for (const a of q.args) {
+        if (a.type === 'var' && a.name !== '_' && !a.name.startsWith('_')) {
+          allVarNames.add(a.name);
+        }
+      }
+    }
+  }
+
+  const fmtSolutions = solutions.map(s => {
+    const bindings = {};
+    for (const vn of allVarNames) {
+      const term = resolveTerm({ type: 'var', name: vn }, s.subst);
+      if (term.type !== 'var') bindings[vn] = termToString(term);
+    }
+    return {
+      bindings,
+      trace: { type: 'rule', goal: originalText, rule: 'conjunction', subtraces: s.traces },
+    };
+  });
+
+  renderResults({
+    query: { predicate: 'conjunction', args: [...allVarNames].map(n => ({ type: 'var', name: n })) },
+    prologResults: {
+      solutions: fmtSolutions,
+      truncated: fmtSolutions.length >= PROLOG_MAX_RESULTS,
+    },
+  });
+}
+
+// =========================================================================
+// AUTO-INIT
+// =========================================================================
+
+window.addEventListener('DOMContentLoaded', () => {
+  // Try auto-fetch silently
+  autoFetch().catch(() => {});
+});
+</script>
+</body>
+</html>

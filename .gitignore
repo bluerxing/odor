@@ -1,0 +1,48 @@
+# OS / Editor
+.DS_Store
+.idea/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Local runtime config
+.mplconfig/
+.claude_home/
+
+# External data / local symlinks (not portable in GitHub repo)
+experiments/
+kegg_cache/
+publications/
+experiments
+kegg_cache
+publications
+
+# Stage outputs (regenerable)
+03_rule_extraction/complex_fol_rules.json
+03_rule_extraction/odor_level_patterns_weighted.json
+03_rule_extraction/odor_network_interactive.html
+03_rule_extraction/visualization_charts/
+
+04_validation_openpom/ec_validation_results/
+04_validation_openpom/ec_validation_results_smoke/
+
+05_validation_cross_dataset/cross_validation_report.json
+05_validation_cross_dataset/cross_validation_report_multi.json
+05_validation_cross_dataset/cross_validation_report_multi_raw.pkl
+05_validation_cross_dataset/visualization_charts_v2_multi/
+05_validation_cross_dataset/visualization_enhanced/
+
+06_visualization/visualization_unified/
+
+# LaTeX build artifacts
+08_paper/*.aux
+08_paper/*.abs
+08_paper/*.bbl
+08_paper/*.blg
+08_paper/*.fdb_latexmk
+08_paper/*.fls
+08_paper/*.log
+08_paper/*.out
+08_paper/*.pdf

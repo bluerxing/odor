@@ -1,0 +1,1278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odor Transformation Query System</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #475569;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #60a5fa;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .tab {
+            padding: 12px 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+        }
+
+        .tab:hover {
+            background: var(--bg-input);
+        }
+
+        .tab.active {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border);
+        }
+
+        .card h3 {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.2rem;
+        }
+
+        .card h3 .icon {
+            font-size: 1.4rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        select, input[type="text"] {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        select:focus, input[type="text"]:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        button {
+            padding: 12px 28px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 500;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: var(--primary-dark);
+        }
+
+        button.secondary {
+            background: var(--secondary);
+        }
+
+        button.secondary:hover {
+            background: #475569;
+        }
+
+        .results {
+            margin-top: 20px;
+        }
+
+        .result-item {
+            background: var(--bg-input);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .result-item.exclusion {
+            border-left-color: var(--danger);
+        }
+
+        .result-item.sufficient {
+            border-left-color: var(--success);
+        }
+
+        .result-item.necessary {
+            border-left-color: var(--warning);
+        }
+
+        .result-item.mutual_exclusion {
+            border-left-color: #8b5cf6;
+        }
+
+        .rule-formula {
+            font-family: 'Courier New', monospace;
+            font-size: 1.05rem;
+            color: #93c5fd;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+
+        .rule-meta {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .rule-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .badge-primary { background: var(--primary); }
+        .badge-success { background: var(--success); }
+        .badge-warning { background: var(--warning); }
+        .badge-danger { background: var(--danger); }
+
+        .ec-sequence {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+
+        .ec-step {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.95rem;
+        }
+
+        .ec-arrow {
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+        }
+
+        .transformation-card {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 20px;
+            background: linear-gradient(135deg, rgba(59,130,246,0.1), rgba(139,92,246,0.1));
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .odor-bubble {
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-weight: 500;
+            text-transform: capitalize;
+        }
+
+        .odor-source {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .odor-target {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .transform-arrow {
+            font-size: 2rem;
+            color: var(--text-secondary);
+        }
+
+        /* Reasoning Section */
+        .reasoning-step {
+            background: var(--bg-input);
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 12px;
+            border-left: 4px solid #8b5cf6;
+        }
+
+        .reasoning-step .step-number {
+            display: inline-block;
+            width: 28px;
+            height: 28px;
+            background: #8b5cf6;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 28px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+
+        .reasoning-step .step-title {
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .reasoning-step .step-content {
+            color: var(--text-secondary);
+            padding-left: 38px;
+        }
+
+        .reasoning-step .matched-rule {
+            background: rgba(139, 92, 246, 0.2);
+            padding: 10px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-family: monospace;
+        }
+
+        /* Logic Builder */
+        .logic-builder {
+            background: var(--bg-input);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .logic-tokens {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            min-height: 50px;
+            padding: 15px;
+            background: var(--bg-dark);
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border: 2px dashed var(--border);
+        }
+
+        .logic-token {
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-family: monospace;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .logic-token:hover {
+            transform: scale(1.05);
+        }
+
+        .logic-token.predicate { background: #3b82f6; }
+        .logic-token.operator { background: #8b5cf6; }
+        .logic-token.negation { background: #ef4444; }
+        .logic-token.value { background: #10b981; }
+
+        .logic-palette {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .palette-btn {
+            padding: 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .palette-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        /* Network Integration */
+        .network-frame {
+            width: 100%;
+            height: 600px;
+            border: none;
+            border-radius: 8px;
+            background: #222;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-bar {
+                gap: 20px;
+            }
+
+            .transformation-card {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .transform-arrow {
+                transform: rotate(90deg);
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-dark);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--secondary);
+        }
+
+        .highlight {
+            background: rgba(251, 191, 36, 0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        .compound-link {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+
+        .compound-link:hover {
+            text-decoration: underline;
+        }
+
+        .result-count {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Odor Transformation Query System</h1>
+            <p>Explore enzymatic rules linking molecular space to human odor perception</p>
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-rules">11,560</div>
+                    <div class="stat-label">First-Order Rules</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-triplets">129,738</div>
+                    <div class="stat-label">Unique Triplets</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-ec">10,286</div>
+                    <div class="stat-label">EC Sequences</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="stat-odors">138</div>
+                    <div class="stat-label">Odor Categories</div>
+                </div>
+            </div>
+        </header>
+
+        <div class="tabs">
+            <div class="tab active" data-tab="transform">Odor Transformation</div>
+            <div class="tab" data-tab="rules">Rule Query</div>
+            <div class="tab" data-tab="reasoning">Reasoning Engine</div>
+            <div class="tab" data-tab="custom">Custom Logic Query</div>
+            <div class="tab" data-tab="network">Interactive Network</div>
+        </div>
+
+        <!-- Tab 1: Odor Transformation -->
+        <div id="transform" class="tab-content active">
+            <div class="card">
+                <h3><span class="icon">&#127812;</span> Query Odor Transformations</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Source Odor</label>
+                        <select id="source-odor">
+                            <option value="">-- Any Source --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Odor</label>
+                        <select id="target-odor">
+                            <option value="">-- Any Target --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>EC Class Filter</label>
+                        <select id="ec-filter">
+                            <option value="">-- Any EC --</option>
+                            <option value="1">1.x.x - Oxidoreductases</option>
+                            <option value="2">2.x.x - Transferases</option>
+                            <option value="3">3.x.x - Hydrolases</option>
+                            <option value="4">4.x.x - Lyases</option>
+                            <option value="5">5.x.x - Isomerases</option>
+                            <option value="6">6.x.x - Ligases</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="queryTransformations()">Search Transformations</button>
+                <button class="secondary" onclick="clearTransformResults()">Clear</button>
+            </div>
+
+            <div id="transform-results" class="results"></div>
+        </div>
+
+        <!-- Tab 2: Rule Query -->
+        <div id="rules" class="tab-content">
+            <div class="card">
+                <h3><span class="icon">&#128218;</span> Query First-Order Logic Rules</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Rule Type</label>
+                        <select id="rule-type">
+                            <option value="">-- All Types --</option>
+                            <option value="conditional_necessary">Conditional Necessary</option>
+                            <option value="necessary">Necessary</option>
+                            <option value="sufficient">Sufficient</option>
+                            <option value="exclusion">Exclusion</option>
+                            <option value="disjunctive_source">Disjunctive Source</option>
+                            <option value="mutual_exclusion">Mutual Exclusion</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Min Confidence</label>
+                        <select id="min-confidence">
+                            <option value="0">Any</option>
+                            <option value="0.5">0.5+</option>
+                            <option value="0.8" selected>0.8+</option>
+                            <option value="0.9">0.9+</option>
+                            <option value="0.95">0.95+</option>
+                            <option value="1.0">1.0 (Perfect)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Contains Odor</label>
+                        <select id="rule-odor">
+                            <option value="">-- Any Odor --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Contains EC</label>
+                        <input type="text" id="rule-ec" placeholder="e.g., 4.2.3">
+                    </div>
+                </div>
+                <button onclick="queryRules()">Search Rules</button>
+                <button class="secondary" onclick="clearRuleResults()">Clear</button>
+            </div>
+
+            <div id="rule-results" class="results"></div>
+        </div>
+
+        <!-- Tab 3: Reasoning Engine -->
+        <div id="reasoning" class="tab-content">
+            <div class="card">
+                <h3><span class="icon">&#129504;</span> Reasoning Engine</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Input premises and see step-by-step rule-based inference.
+                </p>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Source Odor (Given)</label>
+                        <select id="reason-source">
+                            <option value="">-- Select Source --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Target Odor (Query)</label>
+                        <select id="reason-target">
+                            <option value="">-- Select Target --</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Question Type</label>
+                    <select id="reason-question">
+                        <option value="required_ec">What EC is required for this transformation?</option>
+                        <option value="possible_targets">What targets are reachable from this source?</option>
+                        <option value="forbidden_targets">What targets are forbidden from this source?</option>
+                        <option value="sufficient_ec">What EC combinations guarantee the target?</option>
+                    </select>
+                </div>
+                <button onclick="runReasoning()">Run Reasoning</button>
+                <button class="secondary" onclick="clearReasoningResults()">Clear</button>
+            </div>
+
+            <div id="reasoning-results" class="results"></div>
+        </div>
+
+        <!-- Tab 4: Custom Logic Query -->
+        <div id="custom" class="tab-content">
+            <div class="card">
+                <h3><span class="icon">&#128736;</span> Custom Logic Query Builder</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Build complex queries using logical operators.
+                </p>
+
+                <div class="logic-builder">
+                    <label>Your Query:</label>
+                    <div id="logic-tokens" class="logic-tokens">
+                        <span style="color: var(--text-secondary);">Click tokens below to build your query...</span>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label>Predicates:</label>
+                        <div class="logic-palette">
+                            <button class="palette-btn" onclick="addToken('from', 'predicate')">from(X)</button>
+                            <button class="palette-btn" onclick="addToken('to', 'predicate')">to(X)</button>
+                            <button class="palette-btn" onclick="addToken('via', 'predicate')">via(E)</button>
+                            <button class="palette-btn" onclick="addToken('must_via', 'predicate')">must_via(E)</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label>Operators:</label>
+                        <div class="logic-palette">
+                            <button class="palette-btn" onclick="addToken('AND', 'operator')">AND (&#8743;)</button>
+                            <button class="palette-btn" onclick="addToken('OR', 'operator')">OR (&#8744;)</button>
+                            <button class="palette-btn" onclick="addToken('NOT', 'negation')">NOT (&#172;)</button>
+                            <button class="palette-btn" onclick="addToken('IMPLIES', 'operator')">IMPLIES (&#8594;)</button>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 15px;">
+                        <label>Add Value:</label>
+                        <div class="form-row">
+                            <input type="text" id="custom-value" placeholder="Enter odor or EC value...">
+                            <button onclick="addValueToken()">Add Value</button>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="executeCustomQuery()">Execute Query</button>
+                        <button class="secondary" onclick="clearCustomQuery()">Clear Query</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="custom-results" class="results"></div>
+        </div>
+
+        <!-- Tab 5: Interactive Network -->
+        <div id="network" class="tab-content">
+            <div class="card">
+                <h3><span class="icon">&#127760;</span> Interactive Odor Network</h3>
+                <p style="color: var(--text-secondary); margin-bottom: 20px;">
+                    Explore the metabolic network connecting odorous compounds.
+                    <a href="odor_network_interactive.html" target="_blank" style="color: #60a5fa;">Open in new tab &#8599;</a>
+                </p>
+                <iframe src="odor_network_interactive.html" class="network-frame"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global data storage
+        let rulesData = null;
+        let tripletsData = null;
+        let odorList = [];
+        let customQueryTokens = [];
+
+        // Load data on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadData();
+            initializeTabs();
+            populateDropdowns();
+        });
+
+        async function loadData() {
+            try {
+                // Load rules
+                const rulesResponse = await fetch('complex_fol_rules.json');
+                rulesData = await rulesResponse.json();
+
+                // Load triplets
+                const tripletsResponse = await fetch('odor_level_patterns_weighted.json');
+                tripletsData = await tripletsResponse.json();
+
+                // Extract unique odors
+                const odorSet = new Set();
+                if (tripletsData.top_triplets) {
+                    tripletsData.top_triplets.forEach(t => {
+                        odorSet.add(t.source_odor);
+                        odorSet.add(t.target_odor);
+                    });
+                }
+                odorList = Array.from(odorSet).sort();
+
+                // Update stats
+                if (rulesData.summary) {
+                    document.getElementById('stat-rules').textContent = rulesData.summary.total_rules.toLocaleString();
+                }
+                if (tripletsData.summary) {
+                    document.getElementById('stat-triplets').textContent = tripletsData.summary.unique_triplets.toLocaleString();
+                    document.getElementById('stat-ec').textContent = tripletsData.summary.unique_ec_sequences.toLocaleString();
+                    document.getElementById('stat-odors').textContent = (tripletsData.summary.unique_source_odors + tripletsData.summary.unique_target_odors).toString();
+                }
+
+                console.log('Data loaded successfully');
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        function initializeTabs() {
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    tab.classList.add('active');
+                    document.getElementById(tab.dataset.tab).classList.add('active');
+                });
+            });
+        }
+
+        function populateDropdowns() {
+            const dropdowns = ['source-odor', 'target-odor', 'rule-odor', 'reason-source', 'reason-target'];
+            dropdowns.forEach(id => {
+                const select = document.getElementById(id);
+                if (select) {
+                    odorList.forEach(odor => {
+                        const option = document.createElement('option');
+                        option.value = odor;
+                        option.textContent = odor.charAt(0).toUpperCase() + odor.slice(1);
+                        select.appendChild(option);
+                    });
+                }
+            });
+        }
+
+        // ==================== Tab 1: Transformations ====================
+        function queryTransformations() {
+            const sourceOdor = document.getElementById('source-odor').value;
+            const targetOdor = document.getElementById('target-odor').value;
+            const ecFilter = document.getElementById('ec-filter').value;
+
+            if (!tripletsData || !tripletsData.top_triplets) {
+                showResults('transform-results', '<div class="no-results">Data not loaded</div>');
+                return;
+            }
+
+            let results = tripletsData.top_triplets.filter(t => {
+                if (sourceOdor && t.source_odor !== sourceOdor) return false;
+                if (targetOdor && t.target_odor !== targetOdor) return false;
+                if (ecFilter && !t.ec_sequence.some(ec => ec.startsWith(ecFilter))) return false;
+                return true;
+            });
+
+            // Sort by frequency
+            results.sort((a, b) => b.weighted_frequency - a.weighted_frequency);
+
+            // Limit to top 50
+            results = results.slice(0, 50);
+
+            if (results.length === 0) {
+                showResults('transform-results', '<div class="no-results">No transformations found matching your criteria.</div>');
+                return;
+            }
+
+            let html = `<div class="result-count">Found ${results.length} transformations</div>`;
+
+            results.forEach(t => {
+                const ecHtml = t.ec_sequence.map(ec =>
+                    `<span class="ec-step">${ec}</span>`
+                ).join('<span class="ec-arrow">&#8594;</span>');
+
+                const examplesHtml = t.examples ? t.examples.slice(0, 3).map(ex =>
+                    `<a href="https://www.kegg.jp/entry/${ex.src_compound}" target="_blank" class="compound-link">${ex.src_compound}</a> &#8594;
+                     <a href="https://www.kegg.jp/entry/${ex.tgt_compound}" target="_blank" class="compound-link">${ex.tgt_compound}</a>`
+                ).join(' | ') : '';
+
+                html += `
+                    <div class="transformation-card">
+                        <span class="odor-bubble odor-source">${t.source_odor}</span>
+                        <div style="flex: 1; text-align: center;">
+                            <div class="ec-sequence" style="justify-content: center;">
+                                ${ecHtml}
+                            </div>
+                            <div style="color: var(--text-secondary); font-size: 0.85rem; margin-top: 5px;">
+                                Frequency: <strong>${t.weighted_frequency.toFixed(2)}</strong>
+                            </div>
+                            ${examplesHtml ? `<div style="color: var(--text-secondary); font-size: 0.8rem; margin-top: 5px;">Examples: ${examplesHtml}</div>` : ''}
+                        </div>
+                        <span class="odor-bubble odor-target">${t.target_odor}</span>
+                    </div>
+                `;
+            });
+
+            showResults('transform-results', html);
+        }
+
+        function clearTransformResults() {
+            showResults('transform-results', '');
+            document.getElementById('source-odor').value = '';
+            document.getElementById('target-odor').value = '';
+            document.getElementById('ec-filter').value = '';
+        }
+
+        // ==================== Tab 2: Rules ====================
+        function queryRules() {
+            const ruleType = document.getElementById('rule-type').value;
+            const minConf = parseFloat(document.getElementById('min-confidence').value);
+            const odorFilter = document.getElementById('rule-odor').value;
+            const ecFilter = document.getElementById('rule-ec').value.trim();
+
+            if (!rulesData || !rulesData.rules) {
+                showResults('rule-results', '<div class="no-results">Data not loaded</div>');
+                return;
+            }
+
+            let results = [];
+
+            const ruleTypes = ruleType ? [ruleType] : Object.keys(rulesData.rules);
+
+            ruleTypes.forEach(type => {
+                if (rulesData.rules[type]) {
+                    rulesData.rules[type].forEach(rule => {
+                        // Confidence filter
+                        if (rule.confidence < minConf) return;
+
+                        // Odor filter
+                        if (odorFilter) {
+                            const fol = rule.fol_string.toLowerCase();
+                            if (!fol.includes(odorFilter.toLowerCase())) return;
+                        }
+
+                        // EC filter
+                        if (ecFilter) {
+                            if (!rule.fol_string.includes(ecFilter)) return;
+                        }
+
+                        results.push({ ...rule, type });
+                    });
+                }
+            });
+
+            // Sort by support
+            results.sort((a, b) => b.support - a.support);
+
+            // Limit to 100
+            results = results.slice(0, 100);
+
+            if (results.length === 0) {
+                showResults('rule-results', '<div class="no-results">No rules found matching your criteria.</div>');
+                return;
+            }
+
+            let html = `<div class="result-count">Found ${results.length} rules</div>`;
+
+            results.forEach(rule => {
+                html += `
+                    <div class="result-item ${rule.type}">
+                        <div style="margin-bottom: 8px;">
+                            <span class="badge badge-${getBadgeClass(rule.type)}">${formatRuleType(rule.type)}</span>
+                        </div>
+                        <div class="rule-formula">${highlightFormula(rule.fol_string, odorFilter, ecFilter)}</div>
+                        <div class="rule-meta">
+                            <span>&#128202; Support: <strong>${rule.support.toFixed(1)}</strong></span>
+                            <span>&#9989; Confidence: <strong>${(rule.confidence * 100).toFixed(1)}%</strong></span>
+                            ${rule.coverage ? `<span>&#127919; Coverage: <strong>${(rule.coverage * 100).toFixed(1)}%</strong></span>` : ''}
+                        </div>
+                    </div>
+                `;
+            });
+
+            showResults('rule-results', html);
+        }
+
+        function getBadgeClass(type) {
+            const classes = {
+                'conditional_necessary': 'warning',
+                'necessary': 'warning',
+                'sufficient': 'success',
+                'exclusion': 'danger',
+                'disjunctive_source': 'primary',
+                'mutual_exclusion': 'primary'
+            };
+            return classes[type] || 'primary';
+        }
+
+        function formatRuleType(type) {
+            return type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        }
+
+        function highlightFormula(formula, odor, ec) {
+            let result = formula;
+            if (odor) {
+                const regex = new RegExp(`(${odor})`, 'gi');
+                result = result.replace(regex, '<span class="highlight">$1</span>');
+            }
+            if (ec) {
+                const regex = new RegExp(`(${ec.replace('.', '\\.')})`, 'g');
+                result = result.replace(regex, '<span class="highlight">$1</span>');
+            }
+            return result;
+        }
+
+        function clearRuleResults() {
+            showResults('rule-results', '');
+            document.getElementById('rule-type').value = '';
+            document.getElementById('min-confidence').value = '0.8';
+            document.getElementById('rule-odor').value = '';
+            document.getElementById('rule-ec').value = '';
+        }
+
+        // ==================== Tab 3: Reasoning ====================
+        function runReasoning() {
+            const source = document.getElementById('reason-source').value;
+            const target = document.getElementById('reason-target').value;
+            const question = document.getElementById('reason-question').value;
+
+            if (!rulesData || !rulesData.rules) {
+                showResults('reasoning-results', '<div class="no-results">Data not loaded</div>');
+                return;
+            }
+
+            let html = '<div style="margin-bottom: 20px;"><strong>Reasoning Process:</strong></div>';
+            let stepNum = 1;
+
+            // Step 1: State the problem
+            html += createReasoningStep(stepNum++, 'Problem Statement',
+                `Given: source odor = <strong>${source || 'any'}</strong>, target odor = <strong>${target || 'any'}</strong><br>
+                 Question: ${formatQuestion(question)}`);
+
+            // Step 2: Search applicable rules
+            html += createReasoningStep(stepNum++, 'Rule Search',
+                `Searching for rules matching the given constraints...`);
+
+            // Execute reasoning based on question type
+            let matchedRules = [];
+
+            switch(question) {
+                case 'required_ec':
+                    if (source && target) {
+                        matchedRules = rulesData.rules.conditional_necessary?.filter(r =>
+                            r.body.source === source && r.body.target === target
+                        ) || [];
+                    }
+                    break;
+
+                case 'possible_targets':
+                    if (source) {
+                        // Find all targets reachable from source
+                        const targets = new Set();
+                        rulesData.rules.conditional_necessary?.forEach(r => {
+                            if (r.body.source === source) targets.add(r.body.target);
+                        });
+                        rulesData.rules.disjunctive_source?.forEach(r => {
+                            if (r.body.sources?.includes(source)) targets.add(r.head.target);
+                        });
+                        matchedRules = Array.from(targets).map(t => ({ inferred_target: t }));
+                    }
+                    break;
+
+                case 'forbidden_targets':
+                    if (source) {
+                        matchedRules = rulesData.rules.exclusion?.filter(r =>
+                            r.body.source === source
+                        ).slice(0, 20) || [];
+                    }
+                    break;
+
+                case 'sufficient_ec':
+                    if (target) {
+                        matchedRules = rulesData.rules.sufficient?.filter(r =>
+                            r.head.target === target
+                        ) || [];
+                    }
+                    break;
+            }
+
+            // Step 3: Show matched rules
+            if (matchedRules.length > 0) {
+                html += createReasoningStep(stepNum++, `Found ${matchedRules.length} Matching Rules`,
+                    formatMatchedRules(matchedRules, question));
+
+                // Step 4: Inference
+                html += createReasoningStep(stepNum++, 'Inference',
+                    generateInference(matchedRules, question, source, target));
+            } else {
+                html += createReasoningStep(stepNum++, 'No Rules Found',
+                    'No rules match the given constraints. This could mean:<br>' +
+                    '- The transformation is not well-represented in the data<br>' +
+                    '- The combination has not been observed<br>' +
+                    '- Try relaxing the constraints');
+            }
+
+            showResults('reasoning-results', html);
+        }
+
+        function createReasoningStep(num, title, content) {
+            return `
+                <div class="reasoning-step">
+                    <div class="step-title">
+                        <span class="step-number">${num}</span>
+                        ${title}
+                    </div>
+                    <div class="step-content">${content}</div>
+                </div>
+            `;
+        }
+
+        function formatQuestion(q) {
+            const questions = {
+                'required_ec': 'What enzyme class (EC) is <strong>required</strong> for this transformation?',
+                'possible_targets': 'What target odors are <strong>reachable</strong> from this source?',
+                'forbidden_targets': 'What target odors are <strong>forbidden</strong> (excluded) from this source?',
+                'sufficient_ec': 'What EC combinations are <strong>sufficient</strong> to guarantee the target?'
+            };
+            return questions[q] || q;
+        }
+
+        function formatMatchedRules(rules, question) {
+            if (question === 'possible_targets') {
+                return `Reachable targets: <strong>${rules.map(r => r.inferred_target).join(', ')}</strong>`;
+            }
+
+            return rules.slice(0, 10).map(r => {
+                if (r.fol_string) {
+                    return `<div class="matched-rule">${r.fol_string}<br>
+                            <small style="color: var(--text-secondary);">Support: ${r.support?.toFixed(1) || 'N/A'}, Confidence: ${((r.confidence || 0) * 100).toFixed(1)}%</small></div>`;
+                }
+                return '';
+            }).join('');
+        }
+
+        function generateInference(rules, question, source, target) {
+            switch(question) {
+                case 'required_ec':
+                    const ecs = rules.map(r => r.head?.necessary_ec).filter(Boolean);
+                    if (ecs.length > 0) {
+                        return `<strong>Conclusion:</strong> To transform from <em>${source}</em> to <em>${target}</em>,
+                                the following enzyme class(es) are <strong>required</strong>:<br>
+                                <div style="margin-top: 10px;" class="ec-sequence">
+                                    ${ecs.map(ec => `<span class="ec-step">${ec}</span>`).join(' ')}
+                                </div>
+                                <br>This means any pathway achieving this transformation must include at least one of these EC classes.`;
+                    }
+                    break;
+
+                case 'possible_targets':
+                    return `<strong>Conclusion:</strong> From source odor <em>${source}</em>,
+                            ${rules.length} distinct target odors can be reached through known enzymatic pathways.`;
+
+                case 'forbidden_targets':
+                    const forbidden = rules.map(r => r.head?.forbidden_target).filter(Boolean);
+                    return `<strong>Conclusion:</strong> From source odor <em>${source}</em>,
+                            the following targets are <strong>forbidden</strong> (never observed):<br>
+                            <em>${forbidden.slice(0, 10).join(', ')}${forbidden.length > 10 ? '...' : ''}</em>`;
+
+                case 'sufficient_ec':
+                    return `<strong>Conclusion:</strong> The above enzyme combinations are <strong>sufficient</strong>
+                            to guarantee production of <em>${target}</em> odor.
+                            Engineering a pathway with these ECs should reliably yield the target.`;
+            }
+            return 'Unable to generate inference.';
+        }
+
+        function clearReasoningResults() {
+            showResults('reasoning-results', '');
+            document.getElementById('reason-source').value = '';
+            document.getElementById('reason-target').value = '';
+        }
+
+        // ==================== Tab 4: Custom Query ====================
+        function addToken(text, type) {
+            if (customQueryTokens.length === 0 || customQueryTokens[0].text === 'Click tokens below...') {
+                customQueryTokens = [];
+            }
+
+            if (type === 'predicate') {
+                // Prompt for value
+                const value = prompt(`Enter value for ${text}:`, '');
+                if (value) {
+                    customQueryTokens.push({ text: `${text}(${value})`, type });
+                }
+            } else {
+                customQueryTokens.push({ text, type });
+            }
+
+            renderCustomQuery();
+        }
+
+        function addValueToken() {
+            const value = document.getElementById('custom-value').value.trim();
+            if (value) {
+                customQueryTokens.push({ text: value, type: 'value' });
+                document.getElementById('custom-value').value = '';
+                renderCustomQuery();
+            }
+        }
+
+        function renderCustomQuery() {
+            const container = document.getElementById('logic-tokens');
+            if (customQueryTokens.length === 0) {
+                container.innerHTML = '<span style="color: var(--text-secondary);">Click tokens below to build your query...</span>';
+                return;
+            }
+
+            container.innerHTML = customQueryTokens.map((t, i) =>
+                `<span class="logic-token ${t.type}" onclick="removeToken(${i})">${formatToken(t.text)}</span>`
+            ).join(' ');
+        }
+
+        function formatToken(text) {
+            return text.replace('AND', '&#8743;')
+                      .replace('OR', '&#8744;')
+                      .replace('NOT', '&#172;')
+                      .replace('IMPLIES', '&#8594;');
+        }
+
+        function removeToken(index) {
+            customQueryTokens.splice(index, 1);
+            renderCustomQuery();
+        }
+
+        function clearCustomQuery() {
+            customQueryTokens = [];
+            renderCustomQuery();
+            showResults('custom-results', '');
+        }
+
+        function executeCustomQuery() {
+            if (customQueryTokens.length === 0) {
+                showResults('custom-results', '<div class="no-results">Please build a query first.</div>');
+                return;
+            }
+
+            // Parse the query
+            const queryStr = customQueryTokens.map(t => t.text).join(' ');
+
+            let html = `<div class="result-item">
+                <div style="margin-bottom: 10px;"><strong>Parsed Query:</strong></div>
+                <div class="rule-formula">${queryStr}</div>
+            </div>`;
+
+            // Try to match against rules
+            html += '<div style="margin: 20px 0;"><strong>Matching Rules:</strong></div>';
+
+            let matchCount = 0;
+            const allRules = [];
+
+            // Collect all rules
+            Object.entries(rulesData.rules || {}).forEach(([type, rules]) => {
+                rules.forEach(rule => {
+                    allRules.push({ ...rule, type });
+                });
+            });
+
+            // Simple pattern matching
+            const patterns = customQueryTokens
+                .filter(t => t.type === 'predicate' || t.type === 'value')
+                .map(t => t.text.toLowerCase());
+
+            const hasNot = customQueryTokens.some(t => t.text === 'NOT');
+
+            allRules.forEach(rule => {
+                const fol = rule.fol_string.toLowerCase();
+                const matches = patterns.every(p => {
+                    const extracted = p.match(/\(([^)]+)\)/)?.[1] || p;
+                    return fol.includes(extracted);
+                });
+
+                if (matches && matchCount < 30) {
+                    if (hasNot && rule.type === 'exclusion') {
+                        html += `<div class="result-item exclusion">
+                            <span class="badge badge-danger">Exclusion</span>
+                            <div class="rule-formula">${rule.fol_string}</div>
+                        </div>`;
+                        matchCount++;
+                    } else if (!hasNot) {
+                        html += `<div class="result-item ${rule.type}">
+                            <span class="badge badge-${getBadgeClass(rule.type)}">${formatRuleType(rule.type)}</span>
+                            <div class="rule-formula">${rule.fol_string}</div>
+                        </div>`;
+                        matchCount++;
+                    }
+                }
+            });
+
+            if (matchCount === 0) {
+                html += '<div class="no-results">No rules match the query pattern.</div>';
+            } else {
+                html = `<div class="result-count">Found ${matchCount} matching rules</div>` + html;
+            }
+
+            showResults('custom-results', html);
+        }
+
+        // ==================== Utilities ====================
+        function showResults(containerId, html) {
+            document.getElementById(containerId).innerHTML = html;
+        }
+    </script>
+</body>
+</html>
