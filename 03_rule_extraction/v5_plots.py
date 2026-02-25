@@ -473,44 +473,163 @@ def plot_10_key_findings(data, output_dir):
     print("✓ Figure 10: Key Findings")
 
 
-def plot_11_empirical_dashboard(output_dir):
-    """Figure 11: Paper-ready composite dashboard (2x3 panels)."""
-    output_dir = Path(output_dir)
-    panel_specs = [
-        ("A", "Odor Distribution", "02_odor_distribution.png"),
-        ("B", "Pathway Length", "03_pathway_length.png"),
-        ("C", "Transformation Heatmap", "04_transformation_heatmap.png"),
-        ("D", "Top EC Sequences", "05_top_ec_sequences.png"),
-        ("E", "EC by Source Odor", "07a_ec_by_source.png"),
-        ("F", "EC by Target Odor", "07b_ec_by_target.png"),
-    ]
-    missing = [name for _, _, name in panel_specs if not (output_dir / name).exists()]
-    if missing:
-        print(f"! Figure 11 skipped, missing panels: {', '.join(missing)}")
-        return
+def plot_11_empirical_dashboard(data, output_dir):
+    """
+    Figure 11: Paper-ready empirical dashboard — rendered directly from data.
 
-    fig, axes = plt.subplots(3, 2, figsize=(16, 18))
-    axes = axes.flatten()
-    for ax, (tag, title, filename) in zip(axes, panel_specs):
-        img = plt.imread(output_dir / filename)
-        ax.imshow(img); ax.set_axis_off()
-        ax.set_title(f"({tag}) {title}", fontsize=12, fontweight='bold', pad=8)
+    3×2 grid:
+      (A) Odor Distribution (source vs target)
+      (B) Pathway Length distribution
+      (C) Transformation Heatmap
+      (D) Top EC Sequences
+      (E) EC by Source Odor
+      (F) EC by Target Odor
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(exist_ok=True)
+
+    fig = plt.figure(figsize=(18, 22))
+    gs = fig.add_gridspec(3, 2, hspace=0.35, wspace=0.30)
+
+    # ── (A) Odor Distribution ────────────────────────────────────
+    ax_a = fig.add_subplot(gs[0, 0])
+    source_data = data.get('top_source_odors', [])[:15]
+    target_data = data.get('top_target_odors', [])[:15]
+    # Combined horizontal bar: source (left) + target (right) as grouped
+    names_s = [d.get('odor', '') for d in source_data]
+    vals_s = [d.get('total_weight', 0.0) for d in source_data]
+    names_t = [d.get('odor', '') for d in target_data]
+    vals_t = [d.get('total_weight', 0.0) for d in target_data]
+    # Show top-10 source bars
+    ax_a.barh(names_s[:10], vals_s[:10], color='steelblue', edgecolor='black', alpha=0.85, label='Source')
+    ax_a.set_xlabel('Weighted Frequency', fontsize=9)
+    ax_a.set_title('(A) Odor Category Distribution (Source)', fontsize=11, fontweight='bold')
+    ax_a.invert_yaxis()
+    ax_a.tick_params(labelsize=8)
+
+    # ── (B) Pathway Length ───────────────────────────────────────
+    ax_b = fig.add_subplot(gs[0, 1])
+    top_triplets = data.get('top_triplets', [])
+    top_ec_sequences = data.get('top_ec_sequences', [])
+    if top_triplets:
+        sample_size = min(10000, len(top_triplets))
+        sampled = random.sample(top_triplets, sample_size) if len(top_triplets) > sample_size else top_triplets
+        lengths = [len(t.get('ec_sequence', [])) for t in sampled]
+    elif top_ec_sequences:
+        lengths = [len(item.get('ec_sequence', [])) for item in top_ec_sequences]
+    else:
+        lengths = []
+
+    if lengths:
+        counts = Counter(lengths)
+        sorted_lengths = sorted(counts.keys())
+        freqs = [counts[l] for l in sorted_lengths]
+        bars_b = ax_b.bar(sorted_lengths, freqs, color='mediumseagreen', edgecolor='black', alpha=0.85)
+        for bar in bars_b:
+            h = bar.get_height()
+            ax_b.text(bar.get_x() + bar.get_width() / 2., h, f'{int(h)}',
+                      ha='center', va='bottom', fontsize=8, fontweight='bold')
+        ax_b.set_xticks(sorted_lengths)
+        ax_b.text(0.95, 0.90, f'Mean: {np.mean(lengths):.1f}\nMedian: {np.median(lengths):.1f}',
+                  transform=ax_b.transAxes, fontsize=8, va='top', ha='right',
+                  bbox=dict(boxstyle='round', facecolor='lightblue', alpha=0.7))
+    ax_b.set_xlabel('Pathway Length (# EC steps)', fontsize=9)
+    ax_b.set_ylabel('Frequency', fontsize=9)
+    ax_b.set_title('(B) Pathway Length Distribution', fontsize=11, fontweight='bold')
+    ax_b.tick_params(labelsize=8)
+
+    # ── (C) Transformation Heatmap ───────────────────────────────
+    ax_c = fig.add_subplot(gs[1, 0])
+    top_sources = [d.get('odor', '') for d in data.get('top_source_odors', [])[:12]]
+    top_targets = [d.get('odor', '') for d in data.get('top_target_odors', [])[:12]]
+    matrix = np.zeros((len(top_sources), len(top_targets)))
+    src_idx = {s: i for i, s in enumerate(top_sources)}
+    tgt_idx = {t: j for j, t in enumerate(top_targets)}
+    use_n = min(5000, len(top_triplets))
+    for triplet in top_triplets[:use_n]:
+        s, t = triplet.get('source_odor', ''), triplet.get('target_odor', '')
+        if s in src_idx and t in tgt_idx:
+            matrix[src_idx[s], tgt_idx[t]] += float(triplet.get('weighted_frequency', 0.0))
+    im = ax_c.imshow(matrix, cmap='YlOrRd', aspect='auto')
+    ax_c.set_xticks(np.arange(len(top_targets)))
+    ax_c.set_yticks(np.arange(len(top_sources)))
+    ax_c.set_xticklabels(top_targets, rotation=45, ha='right', fontsize=7)
+    ax_c.set_yticklabels(top_sources, fontsize=7)
+    plt.colorbar(im, ax=ax_c, fraction=0.046, pad=0.04)
+    ax_c.set_title('(C) Transformation Heatmap (Source→Target)', fontsize=11, fontweight='bold')
+
+    # ── (D) Top EC Sequences ─────────────────────────────────────
+    ax_d = fig.add_subplot(gs[1, 1])
+    top_ecs = data.get('top_ec_sequences', [])[:20]
+    ec_labels = [' → '.join(item.get('ec_sequence', [])) for item in top_ecs]
+    ec_freqs = [float(item.get('weighted_frequency', 0.0)) for item in top_ecs]
+    ec_colors = []
+    used_cats = []
+    for item in top_ecs:
+        seq = item.get('ec_sequence', [])
+        cat = get_ec_category(seq[0] if seq else '')
+        ec_colors.append(EC_COLOR_MAP.get(cat, '#B0B0B0'))
+        used_cats.append(cat)
+    ax_d.barh(range(len(ec_labels)), ec_freqs, color=ec_colors, edgecolor='black', linewidth=0.5)
+    ax_d.set_yticks(range(len(ec_labels)))
+    ax_d.set_yticklabels(ec_labels, fontsize=6.5)
+    ax_d.invert_yaxis()
+    ax_d.set_xlabel('Weighted Frequency', fontsize=9)
+    ax_d.set_title('(D) Top 20 EC Sequences', fontsize=11, fontweight='bold')
+    unique_cats = list(dict.fromkeys(used_cats))
+    legend_patches = [mpatches.Patch(color=EC_COLOR_MAP.get(c, '#B0B0B0'), label=c) for c in unique_cats]
+    if legend_patches:
+        ax_d.legend(handles=legend_patches, loc='lower right', fontsize=7)
+
+    # ── (E) EC × Source Odor ─────────────────────────────────────
+    ax_e = fig.add_subplot(gs[2, 0])
+    _render_ec_odor_heatmap(ax_e, data, 'top_source_odors', 'source_odor', 'Greens',
+                            '(E) EC Sequence × Source Odor')
+
+    # ── (F) EC × Target Odor ─────────────────────────────────────
+    ax_f = fig.add_subplot(gs[2, 1])
+    _render_ec_odor_heatmap(ax_f, data, 'top_target_odors', 'target_odor', 'Purples',
+                            '(F) EC Sequence × Target Odor')
+
     fig.suptitle("Empirical Overview of Odor Transformation Rules",
-                 fontsize=18, fontweight='bold', y=0.995)
+                 fontsize=16, fontweight='bold', y=0.995)
     fig.tight_layout(rect=[0, 0, 1, 0.985])
-    _save(fig, output_dir / '11_empirical_dashboard.png')
-    fig2, axes2 = plt.subplots(3, 2, figsize=(16, 18))
-    axes2 = axes2.flatten()
-    for ax, (tag, title, filename) in zip(axes2, panel_specs):
-        img = plt.imread(output_dir / filename)
-        ax.imshow(img); ax.set_axis_off()
-        ax.set_title(f"({tag}) {title}", fontsize=12, fontweight='bold', pad=8)
-    fig2.suptitle("Empirical Overview of Odor Transformation Rules",
-                  fontsize=18, fontweight='bold', y=0.995)
-    fig2.tight_layout(rect=[0, 0, 1, 0.985])
-    fig2.savefig(output_dir / '11_empirical_dashboard.pdf', bbox_inches='tight')
-    plt.close(fig2)
-    print("✓ Figure 11: Empirical Dashboard (PNG + PDF)")
+
+    png_path = output_dir / '11_empirical_dashboard.png'
+    pdf_path = output_dir / '11_empirical_dashboard.pdf'
+    fig.savefig(png_path, dpi=_DPI, bbox_inches='tight')
+    fig.savefig(pdf_path, bbox_inches='tight')
+    plt.close(fig)
+    print(f"✓ Figure 11: Empirical Dashboard (PNG + PDF) → {output_dir}/")
+
+
+def _render_ec_odor_heatmap(ax, data, odor_key, odor_field, cmap, title):
+    """Render EC × Odor heatmap directly into an axes."""
+    top_ecs = data.get('top_ec_sequences', [])[:10]
+    top_odors = [d.get('odor', '') for d in data.get(odor_key, [])[:12]]
+    matrix = np.zeros((len(top_ecs), len(top_odors)))
+    top_triplets = data.get('top_triplets', [])[:1000]
+
+    ec_tuples = [tuple(item.get('ec_sequence', [])) for item in top_ecs]
+    odor_idx = {o: j for j, o in enumerate(top_odors)}
+
+    for i, ec_seq in enumerate(ec_tuples):
+        for triplet in top_triplets:
+            if tuple(triplet.get('ec_sequence', [])) == ec_seq:
+                o = triplet.get(odor_field, '')
+                if o in odor_idx:
+                    matrix[i, odor_idx[o]] += float(triplet.get('weighted_frequency', 0.0))
+
+    ec_labels = [(' → '.join(item.get('ec_sequence', [])[:3]) + '...'
+                  if len(item.get('ec_sequence', [])) > 3
+                  else ' → '.join(item.get('ec_sequence', []))) for item in top_ecs]
+    im = ax.imshow(matrix, cmap=cmap, aspect='auto')
+    ax.set_xticks(np.arange(len(top_odors)))
+    ax.set_yticks(np.arange(len(top_ecs)))
+    ax.set_xticklabels(top_odors, rotation=45, ha='right', fontsize=7)
+    ax.set_yticklabels(ec_labels, fontsize=6.5)
+    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    ax.set_title(title, fontsize=11, fontweight='bold')
 
 
 # ===============================================================
@@ -518,21 +637,11 @@ def plot_11_empirical_dashboard(output_dir):
 # ===============================================================
 
 def run_all_plots(viz_data, output_dir):
-    """Generate all figures 1-11 from viz_data dict."""
+    """Generate the paper-ready empirical dashboard from viz_data."""
     output_dir = Path(output_dir)
     output_dir.mkdir(exist_ok=True)
 
-    plot_1_data_overview(viz_data, output_dir)
-    plot_2_odor_distribution(viz_data, output_dir)
-    plot_3_pathway_length_distribution(viz_data, output_dir)
-    plot_4_odor_transformation_heatmap(viz_data, output_dir)
-    plot_5_top_ec_sequences(viz_data, output_dir)
-    plot_6_sankey_preview(viz_data, output_dir)
-    plot_7_ec_by_odor_category_source(viz_data, output_dir)
-    plot_7_ec_by_odor_category_target(viz_data, output_dir)
-    plot_8_ec_function_pies(viz_data, output_dir)
-    plot_9_case_studies(viz_data, output_dir)
-    plot_10_key_findings(viz_data, output_dir)
-    plot_11_empirical_dashboard(output_dir)
+    # Single intelligent dashboard — renders all 6 panels directly from data
+    plot_11_empirical_dashboard(viz_data, output_dir)
 
-    print(f"\n✅ 所有图表已保存到: {output_dir}/")
+    print(f"\n✅ Dashboard 已保存到: {output_dir}/")
