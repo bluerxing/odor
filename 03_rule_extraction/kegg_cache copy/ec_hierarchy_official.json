@@ -1,0 +1,44 @@
+{
+  "1": {
+    "name": "Oxidoreductases",
+    "description": "Catalyze oxidation-reduction reactions",
+    "enzyme_count": 2549,
+    "source": "KEGG_enzyme_list"
+  },
+  "2": {
+    "name": "Transferases",
+    "description": "Catalyze the transfer of a group from one molecule to another",
+    "enzyme_count": 2272,
+    "source": "KEGG_enzyme_list"
+  },
+  "3": {
+    "name": "Hydrolases",
+    "description": "Catalyze hydrolysis reactions",
+    "enzyme_count": 1848,
+    "source": "KEGG_enzyme_list"
+  },
+  "4": {
+    "name": "Lyases",
+    "description": "Catalyze addition or removal of groups to form double bonds",
+    "enzyme_count": 894,
+    "source": "KEGG_enzyme_list"
+  },
+  "5": {
+    "name": "Isomerases",
+    "description": "Catalyze intramolecular rearrangements",
+    "enzyme_count": 343,
+    "source": "KEGG_enzyme_list"
+  },
+  "6": {
+    "name": "Ligases",
+    "description": "Catalyze the formation of bonds with ATP cleavage",
+    "enzyme_count": 269,
+    "source": "KEGG_enzyme_list"
+  },
+  "7": {
+    "name": "Translocases",
+    "description": "Catalyze the movement of ions or molecules across membranes",
+    "enzyme_count": 99,
+    "source": "KEGG_enzyme_list"
+  }
+}

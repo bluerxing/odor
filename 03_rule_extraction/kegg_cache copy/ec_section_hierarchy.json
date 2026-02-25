@@ -1,0 +1,634 @@
+{
+  "1.1": {
+    "name": "alcohol dehydrogenase",
+    "description": "EC 1.1 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 569,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.10": {
+    "name": "trans-acenaphthene-1",
+    "description": "EC 1.10 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 25,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.11": {
+    "name": "NADH peroxidase",
+    "description": "EC 1.11 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 37,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.12": {
+    "name": "Transferred to 1.12.7.2",
+    "description": "EC 1.12 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 19,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.13": {
+    "name": "Transferred to 1.13.11.1",
+    "description": "EC 1.13 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 137,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.14": {
+    "name": "Transferred to 1.14.14.1",
+    "description": "EC 1.14 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 818,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.15": {
+    "name": "superoxide dismutase",
+    "description": "EC 1.15 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 2,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.16": {
+    "name": "mercury(II) reductase",
+    "description": "EC 1.16 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 20,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.17": {
+    "name": "CDP-4-dehydro-6-deoxyglucose reductase",
+    "description": "EC 1.17 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 50,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.18": {
+    "name": "rubredoxin---NAD+ reductase",
+    "description": "EC 1.18 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 14,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.19": {
+    "name": "flavodoxin---NADP+ reductase",
+    "description": "EC 1.19 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 2,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.2": {
+    "name": "Deleted entry",
+    "description": "EC 1.2 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 157,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.20": {
+    "name": "phosphonate dehydrogenase",
+    "description": "EC 1.20 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 9,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.21": {
+    "name": "iodotyrosine deiodinase",
+    "description": "EC 1.21 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 28,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.22": {
+    "name": "Transferred to 1.21.1.1",
+    "description": "EC 1.22 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 1,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.23": {
+    "name": "(+)-pinoresinol reductase",
+    "description": "EC 1.23 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 5,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.3": {
+    "name": "dihydropyrimidine dehydrogenase (NAD+)",
+    "description": "EC 1.3 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 236,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.4": {
+    "name": "alanine dehydrogenase",
+    "description": "EC 1.4 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 71,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.5": {
+    "name": "1-piperideine-2-carboxylate/1-pyrroline-2-carboxyl...",
+    "description": "EC 1.5 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 114,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.6": {
+    "name": "NAD(P)+ transhydrogenase (Si-specific)",
+    "description": "EC 1.6 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 69,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.7": {
+    "name": "nitrate reductase (NADH)",
+    "description": "EC 1.7 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 45,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.8": {
+    "name": "Deleted entry",
+    "description": "EC 1.8 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 80,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.9": {
+    "name": "Transferred to 7.1.1.9",
+    "description": "EC 1.9 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 5,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.97": {
+    "name": "chlorate reductase",
+    "description": "EC 1.97 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 15,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.98": {
+    "name": "Transferred to 1.12.7.2",
+    "description": "EC 1.98 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 1,
+    "source": "KEGG_enzyme_list"
+  },
+  "1.99": {
+    "name": "Transferred to 1.12.7.2",
+    "description": "EC 1.99 section within Oxidoreductases",
+    "main_class": "1",
+    "main_class_name": "Oxidoreductases",
+    "enzyme_count": 20,
+    "source": "KEGG_enzyme_list"
+  },
+  "2.1": {
+    "name": "nicotinamide N-methyltransferase",
+    "description": "EC 2.1 section within Transferases",
+    "main_class": "2",
+    "main_class_name": "Transferases",
+    "enzyme_count": 439,
+    "source": "KEGG_enzyme_list"
+  },
+  "2.10": {
+    "name": "molybdopterin molybdotransferase",
+    "description": "EC 2.10 section within Transferases",
+    "main_class": "2",
+    "main_class_name": "Transferases",
+    "enzyme_count": 1,
+    "source": "KEGG_enzyme_list"
+  },
+  "2.2": {
+    "name": "transketolase",
+    "description": "EC 2.2 section within Transferases",
+    "main_class": "2",
+    "main_class_name": "Transferases",
+    "enzyme_count": 15,
+    "source": "KEGG_enzyme_list"
+  },
+  "2.3": {
+    "name": "amino-acid N-acetyltransferase",
+    "description": "EC 2.3 section within Transferases",
+    "main_class": "2",
+    "main_class_name": "Transferases",
+    "enzyme_count": 395,
+    "source": "KEGG_enzyme_list"
+  },
+  "2.4": {
+    "name": "glycogen phosphorylase",
+    "description": "EC 2.4 section within Transferases",
+    "main_class": "2",
+    "main_class_name": "Transferases",
+    "enzyme_count": 502,
+    "source": "KEGG_enzyme_list"
+  },
+  "2.5": {
+    "name": "dimethylallyltranstransferase",
+    "description": "EC 2.5 section within Transferases",
+    "main_class": "2",
+    "main_class_name": "Transferases",
+    "enzyme_count": 161,
+    "source": "KEGG_enzyme_list"
+  },
+  "2.6": {
+    "name": "aspartate transaminase",
+    "description": "EC 2.6 section within Transferases",
+    "main_class": "2",
+    "main_class_name": "Transferases",
+    "enzyme_count": 133,
+    "source": "KEGG_enzyme_list"
+  },
+  "2.7": {
+    "name": "hexokinase",
+    "description": "EC 2.7 section within Transferases",
+    "main_class": "2",
+    "main_class_name": "Transferases",
+    "enzyme_count": 531,
+    "source": "KEGG_enzyme_list"
+  },
+  "2.8": {
+    "name": "thiosulfate sulfurtransferase",
+    "description": "EC 2.8 section within Transferases",
+    "main_class": "2",
+    "main_class_name": "Transferases",
+    "enzyme_count": 92,
+    "source": "KEGG_enzyme_list"
+  },
+  "2.9": {
+    "name": "L-seryl-tRNASec selenium transferase",
+    "description": "EC 2.9 section within Transferases",
+    "main_class": "2",
+    "main_class_name": "Transferases",
+    "enzyme_count": 3,
+    "source": "KEGG_enzyme_list"
+  },
+  "3.1": {
+    "name": "carboxylesterase",
+    "description": "EC 3.1 section within Hydrolases",
+    "main_class": "3",
+    "main_class_name": "Hydrolases",
+    "enzyme_count": 543,
+    "source": "KEGG_enzyme_list"
+  },
+  "3.10": {
+    "name": "N-sulfoglucosamine sulfohydrolase",
+    "description": "EC 3.10 section within Hydrolases",
+    "main_class": "3",
+    "main_class_name": "Hydrolases",
+    "enzyme_count": 2,
+    "source": "KEGG_enzyme_list"
+  },
+  "3.11": {
+    "name": "phosphonoacetaldehyde hydrolase",
+    "description": "EC 3.11 section within Hydrolases",
+    "main_class": "3",
+    "main_class_name": "Hydrolases",
+    "enzyme_count": 3,
+    "source": "KEGG_enzyme_list"
+  },
+  "3.12": {
+    "name": "trithionate hydrolase",
+    "description": "EC 3.12 section within Hydrolases",
+    "main_class": "3",
+    "main_class_name": "Hydrolases",
+    "enzyme_count": 1,
+    "source": "KEGG_enzyme_list"
+  },
+  "3.13": {
+    "name": "UDP-sulfoquinovose synthase",
+    "description": "EC 3.13 section within Hydrolases",
+    "main_class": "3",
+    "main_class_name": "Hydrolases",
+    "enzyme_count": 13,
+    "source": "KEGG_enzyme_list"
+  },
+  "3.2": {
+    "name": "alpha-amylase",
+    "description": "EC 3.2 section within Hydrolases",
+    "main_class": "3",
+    "main_class_name": "Hydrolases",
+    "enzyme_count": 261,
+    "source": "KEGG_enzyme_list"
+  },
+  "3.3": {
+    "name": "Transferred to 3.13.2.1",
+    "description": "EC 3.3 section within Hydrolases",
+    "main_class": "3",
+    "main_class_name": "Hydrolases",
+    "enzyme_count": 18,
+    "source": "KEGG_enzyme_list"
+  },
+  "3.4": {
+    "name": "Transferred to 3.4.11.1",
+    "description": "EC 3.4 section within Hydrolases",
+    "main_class": "3",
+    "main_class_name": "Hydrolases",
+    "enzyme_count": 555,
+    "source": "KEGG_enzyme_list"
+  },
+  "3.5": {
+    "name": "asparaginase",
+    "description": "EC 3.5 section within Hydrolases",
+    "main_class": "3",
+    "main_class_name": "Hydrolases",
+    "enzyme_count": 255,
+    "source": "KEGG_enzyme_list"
+  },
+  "3.6": {
+    "name": "inorganic diphosphatase",
+    "description": "EC 3.6 section within Hydrolases",
+    "main_class": "3",
+    "main_class_name": "Hydrolases",
+    "enzyme_count": 153,
+    "source": "KEGG_enzyme_list"
+  },
+  "3.7": {
+    "name": "oxaloacetase",
+    "description": "EC 3.7 section within Hydrolases",
+    "main_class": "3",
+    "main_class_name": "Hydrolases",
+    "enzyme_count": 28,
+    "source": "KEGG_enzyme_list"
+  },
+  "3.8": {
+    "name": "Deleted entry",
+    "description": "EC 3.8 section within Hydrolases",
+    "main_class": "3",
+    "main_class_name": "Hydrolases",
+    "enzyme_count": 13,
+    "source": "KEGG_enzyme_list"
+  },
+  "3.9": {
+    "name": "phosphoamidase",
+    "description": "EC 3.9 section within Hydrolases",
+    "main_class": "3",
+    "main_class_name": "Hydrolases",
+    "enzyme_count": 3,
+    "source": "KEGG_enzyme_list"
+  },
+  "4.1": {
+    "name": "pyruvate decarboxylase",
+    "description": "EC 4.1 section within Lyases",
+    "main_class": "4",
+    "main_class_name": "Lyases",
+    "enzyme_count": 271,
+    "source": "KEGG_enzyme_list"
+  },
+  "4.2": {
+    "name": "carbonic anhydrase",
+    "description": "EC 4.2 section within Lyases",
+    "main_class": "4",
+    "main_class_name": "Lyases",
+    "enzyme_count": 467,
+    "source": "KEGG_enzyme_list"
+  },
+  "4.3": {
+    "name": "aspartate ammonia-lyase",
+    "description": "EC 4.3 section within Lyases",
+    "main_class": "4",
+    "main_class_name": "Lyases",
+    "enzyme_count": 58,
+    "source": "KEGG_enzyme_list"
+  },
+  "4.4": {
+    "name": "cystathionine gamma-lyase",
+    "description": "EC 4.4 section within Lyases",
+    "main_class": "4",
+    "main_class_name": "Lyases",
+    "enzyme_count": 45,
+    "source": "KEGG_enzyme_list"
+  },
+  "4.5": {
+    "name": "DDT-dehydrochlorinase",
+    "description": "EC 4.5 section within Lyases",
+    "main_class": "4",
+    "main_class_name": "Lyases",
+    "enzyme_count": 5,
+    "source": "KEGG_enzyme_list"
+  },
+  "4.6": {
+    "name": "adenylate cyclase",
+    "description": "EC 4.6 section within Lyases",
+    "main_class": "4",
+    "main_class_name": "Lyases",
+    "enzyme_count": 26,
+    "source": "KEGG_enzyme_list"
+  },
+  "4.7": {
+    "name": "alpha-D-ribose 1-methylphosphonate 5-phosphate C-P...",
+    "description": "EC 4.7 section within Lyases",
+    "main_class": "4",
+    "main_class_name": "Lyases",
+    "enzyme_count": 1,
+    "source": "KEGG_enzyme_list"
+  },
+  "4.8": {
+    "name": "L-piperazate synthase",
+    "description": "EC 4.8 section within Lyases",
+    "main_class": "4",
+    "main_class_name": "Lyases",
+    "enzyme_count": 8,
+    "source": "KEGG_enzyme_list"
+  },
+  "4.98": {
+    "name": "protoporphyrin ferrochelatase",
+    "description": "EC 4.98 section within Lyases",
+    "main_class": "4",
+    "main_class_name": "Lyases",
+    "enzyme_count": 1,
+    "source": "KEGG_enzyme_list"
+  },
+  "4.99": {
+    "name": "Transferred to 4.98.1.1",
+    "description": "EC 4.99 section within Lyases",
+    "main_class": "4",
+    "main_class_name": "Lyases",
+    "enzyme_count": 12,
+    "source": "KEGG_enzyme_list"
+  },
+  "5.1": {
+    "name": "alanine racemase",
+    "description": "EC 5.1 section within Isomerases",
+    "main_class": "5",
+    "main_class_name": "Isomerases",
+    "enzyme_count": 85,
+    "source": "KEGG_enzyme_list"
+  },
+  "5.2": {
+    "name": "maleate isomerase",
+    "description": "EC 5.2 section within Isomerases",
+    "main_class": "5",
+    "main_class_name": "Isomerases",
+    "enzyme_count": 14,
+    "source": "KEGG_enzyme_list"
+  },
+  "5.3": {
+    "name": "triose-phosphate isomerase",
+    "description": "EC 5.3 section within Isomerases",
+    "main_class": "5",
+    "main_class_name": "Isomerases",
+    "enzyme_count": 83,
+    "source": "KEGG_enzyme_list"
+  },
+  "5.4": {
+    "name": "lysolecithin acylmutase",
+    "description": "EC 5.4 section within Isomerases",
+    "main_class": "5",
+    "main_class_name": "Isomerases",
+    "enzyme_count": 103,
+    "source": "KEGG_enzyme_list"
+  },
+  "5.5": {
+    "name": "muconate cycloisomerase",
+    "description": "EC 5.5 section within Isomerases",
+    "main_class": "5",
+    "main_class_name": "Isomerases",
+    "enzyme_count": 38,
+    "source": "KEGG_enzyme_list"
+  },
+  "5.6": {
+    "name": "microtubule-severing ATPase",
+    "description": "EC 5.6 section within Isomerases",
+    "main_class": "5",
+    "main_class_name": "Isomerases",
+    "enzyme_count": 16,
+    "source": "KEGG_enzyme_list"
+  },
+  "5.99": {
+    "name": "thiocyanate isomerase",
+    "description": "EC 5.99 section within Isomerases",
+    "main_class": "5",
+    "main_class_name": "Isomerases",
+    "enzyme_count": 4,
+    "source": "KEGG_enzyme_list"
+  },
+  "6.1": {
+    "name": "tyrosine---tRNA ligase",
+    "description": "EC 6.1 section within Ligases",
+    "main_class": "6",
+    "main_class_name": "Ligases",
+    "enzyme_count": 31,
+    "source": "KEGG_enzyme_list"
+  },
+  "6.2": {
+    "name": "acetate---CoA ligase",
+    "description": "EC 6.2 section within Ligases",
+    "main_class": "6",
+    "main_class_name": "Ligases",
+    "enzyme_count": 81,
+    "source": "KEGG_enzyme_list"
+  },
+  "6.3": {
+    "name": "aspartate---ammonia ligase",
+    "description": "EC 6.3 section within Ligases",
+    "main_class": "6",
+    "main_class_name": "Ligases",
+    "enzyme_count": 132,
+    "source": "KEGG_enzyme_list"
+  },
+  "6.4": {
+    "name": "pyruvate carboxylase",
+    "description": "EC 6.4 section within Ligases",
+    "main_class": "6",
+    "main_class_name": "Ligases",
+    "enzyme_count": 12,
+    "source": "KEGG_enzyme_list"
+  },
+  "6.5": {
+    "name": "DNA ligase (ATP)",
+    "description": "EC 6.5 section within Ligases",
+    "main_class": "6",
+    "main_class_name": "Ligases",
+    "enzyme_count": 9,
+    "source": "KEGG_enzyme_list"
+  },
+  "6.6": {
+    "name": "magnesium chelatase",
+    "description": "EC 6.6 section within Ligases",
+    "main_class": "6",
+    "main_class_name": "Ligases",
+    "enzyme_count": 2,
+    "source": "KEGG_enzyme_list"
+  },
+  "6.7": {
+    "name": "3-amino-2-hydroxy-4-methoxybenzoate diazotase",
+    "description": "EC 6.7 section within Ligases",
+    "main_class": "6",
+    "main_class_name": "Ligases",
+    "enzyme_count": 2,
+    "source": "KEGG_enzyme_list"
+  },
+  "7.1": {
+    "name": "proton-translocating NAD(P)+ transhydrogenase",
+    "description": "EC 7.1 section within Translocases",
+    "main_class": "7",
+    "main_class_name": "Translocases",
+    "enzyme_count": 16,
+    "source": "KEGG_enzyme_list"
+  },
+  "7.2": {
+    "name": "NADH:ubiquinone reductase (Na+-transporting)",
+    "description": "EC 7.2 section within Translocases",
+    "main_class": "7",
+    "main_class_name": "Translocases",
+    "enzyme_count": 32,
+    "source": "KEGG_enzyme_list"
+  },
+  "7.3": {
+    "name": "ABC-type phosphate transporter",
+    "description": "EC 7.3 section within Translocases",
+    "main_class": "7",
+    "main_class_name": "Translocases",
+    "enzyme_count": 7,
+    "source": "KEGG_enzyme_list"
+  },
+  "7.4": {
+    "name": "ABC-type polar-amino-acid transporter",
+    "description": "EC 7.4 section within Translocases",
+    "main_class": "7",
+    "main_class_name": "Translocases",
+    "enzyme_count": 14,
+    "source": "KEGG_enzyme_list"
+  },
+  "7.5": {
+    "name": "ABC-type maltose transporter",
+    "description": "EC 7.5 section within Translocases",
+    "main_class": "7",
+    "main_class_name": "Translocases",
+    "enzyme_count": 14,
+    "source": "KEGG_enzyme_list"
+  },
+  "7.6": {
+    "name": "P-type phospholipid transporter",
+    "description": "EC 7.6 section within Translocases",
+    "main_class": "7",
+    "main_class_name": "Translocases",
+    "enzyme_count": 16,
+    "source": "KEGG_enzyme_list"
+  }
+}
