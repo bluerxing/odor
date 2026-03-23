@@ -178,6 +178,17 @@ section { margin-bottom: 56px; }
 .ec-children.open { max-height: 5000px; }
 
 /* ---------- Discovery Cards Grid ---------- */
+.viz-row {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.viz-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
 .discovery-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(580px, 1fr));
@@ -749,6 +760,44 @@ span.op   { color: var(--green); font-weight: 700; }
   </section>
 
   <!-- ================================================================
+       Section 3.5: Cross-Space Validation
+       ================================================================ -->
+  <section id="sectionDualSpace">
+    <div class="section-header">
+      <h2>Cross-Space Validation: Computation vs Human Perception</h2>
+      <p>The same enzyme sequences produce consistent transformation directions in <strong>both</strong> a computational embedding (OpenPOM 256-dim) <strong>and</strong> human psychophysical ratings (Keller 21-dim) — two entirely independent perceptual spaces.</p>
+    </div>
+
+    <div class="viz-row">
+      <div class="viz-card" style="flex:1; min-width:300px;">
+        <h4>Computational Delta Space (PCA)</h4>
+        <p style="color:var(--muted);font-size:.8rem;">Each dot = one metabolic edge's δ-vector. Colored arrows = top RC groups.</p>
+        <div id="chartDualOpenpom" style="width:100%;height:360px;"></div>
+      </div>
+      <div class="viz-card" style="flex:1; min-width:300px;">
+        <h4>Human Perceptual Delta Space (PCA)</h4>
+        <p style="color:var(--muted);font-size:.8rem;">Same RC groups, same colors — directions align across independent spaces.</p>
+        <div id="chartDualKeller" style="width:100%;height:360px;"></div>
+      </div>
+    </div>
+
+    <div class="viz-row" style="margin-top:16px;">
+      <div class="viz-card" style="flex:1;">
+        <h4>What Each Enzyme Trajectory Means Perceptually</h4>
+        <p style="color:var(--muted);font-size:.8rem;">Mean Keller descriptor shift for each top RC group. Red = increase, blue = decrease.</p>
+        <div id="chartHeatmap" style="width:100%;overflow-x:auto;"></div>
+      </div>
+    </div>
+
+    <div style="text-align:center;padding:8px 0;">
+      <p style="color:var(--muted);font-size:.85rem;">
+        <strong style="color:#E69F00;">Key insight:</strong> Neither OpenPOM nor Keller was designed to study odor <em>change</em>.
+        The directional signal was always latent in these static odor maps — our trajectory framework is the first to reveal it.
+      </p>
+    </div>
+  </section>
+
+  <!-- ================================================================
        Section 4: Six Structural Discoveries (Interactive Reasoning)
        ================================================================ -->
   <section id="sectionDiscoveries">
@@ -840,6 +889,7 @@ let EC_HIERARCHY = [];
 let REASONING_BARRIERS = {};
 let REASONING_COMPAT = {};
 let REASONING_ORDER = {};
+let DUAL_SPACE = null;
 
 let DATA_READY = false;
 let ALL_ECS = [];
@@ -849,7 +899,7 @@ let ALL_ECS = [];
    ---------------------------------------------------------------- */
 async function loadAllData() {
   try {
-    const [rules, eventsIndex, odors, stats, viz, showcase, ecHierarchy, barriers, compat, order] = await Promise.all([
+    const [rules, eventsIndex, odors, stats, viz, showcase, ecHierarchy, barriers, compat, order, dualSpace] = await Promise.all([
       fetch('data/rules.json').then(r => r.json()),
       fetch('data/events_index.json').then(r => r.json()),
       fetch('data/odors.json').then(r => r.json()),
@@ -860,6 +910,7 @@ async function loadAllData() {
       fetch('data/reasoning_barriers.json').then(r => r.json()),
       fetch('data/reasoning_compat.json').then(r => r.json()),
       fetch('data/reasoning_order.json').then(r => r.json()),
+      fetch('data/dual_space.json').then(r => r.json()).catch(() => null),
     ]);
     RULES = rules;
     EVENTS_INDEX = eventsIndex;
@@ -871,6 +922,7 @@ async function loadAllData() {
     REASONING_BARRIERS = barriers;
     REASONING_COMPAT = compat;
     REASONING_ORDER = order;
+    DUAL_SPACE = dualSpace;
 
     const ecSet = new Set();
     for (const key of Object.keys(EVENTS_INDEX)) {
@@ -893,6 +945,7 @@ function onDataReady() {
   loadStats();
   renderDashboard();
   renderEcHierarchy();
+  renderDualSpace();
 
   // Resolve Order Sensitivity defaults from actual data
   const orderDef = DISCOVERY_DEFS.find(d => d.id === 'order');
@@ -1150,6 +1203,136 @@ function renderDashboard() {
   renderAsymmetry();
   renderLengths();
   renderRuleTypes();
+}
+
+/* ----------------------------------------------------------------
+   Dual-Space Validation Visualizations
+   ---------------------------------------------------------------- */
+function renderDualSpace() {
+  if (!DUAL_SPACE) { document.getElementById('sectionDualSpace').style.display = 'none'; return; }
+  const ds = DUAL_SPACE;
+  const GCOLORS = ['#0072B2','#E69F00','#009E73','#CC79A7','#8C613C','#D55E00'];
+
+  function drawScatter(containerId, bgPoints, groups, pKey, mKey, pcaVar) {
+    const el = document.getElementById(containerId); if (!el) return;
+    el.innerHTML = '';
+    const W = 440, H = 340, margin = {top:20, right:20, bottom:40, left:50};
+    const iW = W - margin.left - margin.right, iH = H - margin.top - margin.bottom;
+
+    const allX = bgPoints.map(p=>p[0]).concat(...groups.map(g=>g[pKey].map(p=>p[0])));
+    const allY = bgPoints.map(p=>p[1]).concat(...groups.map(g=>g[pKey].map(p=>p[1])));
+    const pad = 0.1;
+    const xExt = [Math.min(...allX), Math.max(...allX)];
+    const yExt = [Math.min(...allY), Math.max(...allY)];
+    const xRange = xExt[1]-xExt[0]; const yRange = yExt[1]-yExt[0];
+
+    const svg = d3.select(el).append('svg').attr('viewBox',[0,0,W,H]).attr('preserveAspectRatio','xMidYMid meet');
+    const g = svg.append('g').attr('transform',`translate(${margin.left},${margin.top})`);
+    const x = d3.scaleLinear().domain([xExt[0]-xRange*pad, xExt[1]+xRange*pad]).range([0,iW]);
+    const y = d3.scaleLinear().domain([yExt[0]-yRange*pad, yExt[1]+yRange*pad]).range([iH,0]);
+
+    g.append('g').attr('transform',`translate(0,${iH})`).call(d3.axisBottom(x).ticks(5)).selectAll('text').attr('fill','#94a3b8').attr('font-size','.65rem');
+    g.append('g').call(d3.axisLeft(y).ticks(5)).selectAll('text').attr('fill','#94a3b8').attr('font-size','.65rem');
+    g.selectAll('.domain,.tick line').attr('stroke','#334155');
+
+    g.append('text').attr('x',iW/2).attr('y',iH+32).attr('text-anchor','middle').attr('fill','#94a3b8').attr('font-size','.7rem')
+      .text(`PC1 (${(pcaVar[0]*100).toFixed(1)}%)`);
+    g.append('text').attr('transform','rotate(-90)').attr('x',-iH/2).attr('y',-38).attr('text-anchor','middle').attr('fill','#94a3b8').attr('font-size','.7rem')
+      .text(`PC2 (${(pcaVar[1]*100).toFixed(1)}%)`);
+
+    // Background dots
+    g.selectAll('.bg').data(bgPoints).join('circle').attr('cx',d=>x(d[0])).attr('cy',d=>y(d[1]))
+      .attr('r',2).attr('fill','#555').attr('opacity',0.3);
+
+    // Highlighted groups: arrows from origin to each point, plus mean arrow
+    groups.forEach((grp, gi) => {
+      const color = GCOLORS[gi % GCOLORS.length];
+      const pts = grp[pKey];
+      const mean = grp[mKey];
+      // Individual arrows (thin)
+      pts.forEach(pt => {
+        g.append('line').attr('x1',x(0)).attr('y1',y(0)).attr('x2',x(pt[0])).attr('y2',y(pt[1]))
+          .attr('stroke',color).attr('stroke-width',1).attr('opacity',0.3);
+      });
+      // Points
+      g.selectAll(`.grp${gi}`).data(pts).join('circle')
+        .attr('cx',d=>x(d[0])).attr('cy',d=>y(d[1]))
+        .attr('r',3.5).attr('fill',color).attr('opacity',0.7).attr('stroke','white').attr('stroke-width',0.5);
+      // Mean arrow (thick)
+      const dx = x(mean[0])-x(0), dy = y(mean[1])-y(0);
+      const len = Math.sqrt(dx*dx+dy*dy);
+      if (len > 5) {
+        g.append('line').attr('x1',x(0)).attr('y1',y(0)).attr('x2',x(mean[0])).attr('y2',y(mean[1]))
+          .attr('stroke',color).attr('stroke-width',2.5).attr('marker-end','url(#arrow'+gi+')');
+        svg.append('defs').append('marker').attr('id','arrow'+gi).attr('viewBox','0 0 10 10')
+          .attr('refX',8).attr('refY',5).attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto')
+          .append('path').attr('d','M 0 0 L 10 5 L 0 10 z').attr('fill',color);
+      }
+    });
+
+    // Compact legend (bottom-right, short labels)
+    const leg = svg.append('g').attr('transform',`translate(${W - margin.right - 120},${H - margin.bottom - groups.length * 11 - 4})`);
+    groups.forEach((grp, i) => {
+      const row = leg.append('g').attr('transform',`translate(0,${i*11})`);
+      row.append('rect').attr('width',8).attr('height',8).attr('rx',2).attr('fill',GCOLORS[i%GCOLORS.length]);
+      // Short label: first and last EC only
+      const ecs = grp.ec_sequence;
+      const shortLabel = ecs.length <= 2 ? ecs.join('→') : ecs[0] + '→…→' + ecs[ecs.length-1];
+      row.append('text').attr('x',11).attr('y',8).attr('fill','#94a3b8').attr('font-size','.5rem')
+        .text(`${shortLabel} (n=${grp.n_edges})`);
+    });
+  }
+
+  drawScatter('chartDualOpenpom', ds.background.openpom, ds.highlighted_groups, 'openpom_points', 'openpom_mean', ds.pca_variance.openpom);
+  drawScatter('chartDualKeller', ds.background.keller, ds.highlighted_groups, 'keller_points', 'keller_mean', ds.pca_variance.keller);
+
+  // Heatmap
+  const hm = ds.heatmap;
+  if (hm && hm.values.length > 0) {
+    const el = document.getElementById('chartHeatmap'); if (!el) return;
+    el.innerHTML = '';
+    const nGroups = hm.groups.length, nDesc = hm.descriptors.length;
+    const cellW = 32, cellH = 28, labelW = 160, topLabelH = 80;
+    const W = labelW + nDesc * cellW + 20, H = topLabelH + nGroups * cellH + 10;
+
+    const allVals = hm.values.flat();
+    const maxAbs = Math.max(Math.abs(Math.min(...allVals)), Math.abs(Math.max(...allVals))) || 1;
+
+    const svg = d3.select(el).append('svg').attr('viewBox',[0,0,W,H]).attr('preserveAspectRatio','xMidYMid meet')
+      .style('max-width','100%');
+
+    // Column labels (descriptors) rotated
+    hm.descriptors.forEach((desc, j) => {
+      svg.append('text').attr('x', labelW + j * cellW + cellW/2).attr('y', topLabelH - 4)
+        .attr('text-anchor','end').attr('transform',`rotate(-50,${labelW + j * cellW + cellW/2},${topLabelH - 4})`)
+        .attr('fill','#e2e8f0').attr('font-size','.6rem').text(desc);
+    });
+
+    // Rows
+    hm.groups.forEach((grpLabel, i) => {
+      const yy = topLabelH + i * cellH;
+      // Row label
+      svg.append('text').attr('x', labelW - 6).attr('y', yy + cellH/2 + 4)
+        .attr('text-anchor','end').attr('fill','#e2e8f0').attr('font-size','.65rem').attr('font-weight','600')
+        .text(grpLabel.length > 22 ? grpLabel.slice(0,20)+'…' : grpLabel);
+
+      // Cells
+      hm.values[i].forEach((val, j) => {
+        const norm = val / maxAbs; // -1 to 1
+        const color = norm > 0 ? d3.interpolateReds(Math.abs(norm)*0.8+0.1) : d3.interpolateBlues(Math.abs(norm)*0.8+0.1);
+        svg.append('rect')
+          .attr('x', labelW + j * cellW).attr('y', yy)
+          .attr('width', cellW - 1).attr('height', cellH - 1).attr('rx', 2)
+          .attr('fill', color).attr('opacity', 0.85);
+        if (Math.abs(val) > maxAbs * 0.3) {
+          svg.append('text')
+            .attr('x', labelW + j * cellW + cellW/2).attr('y', yy + cellH/2 + 4)
+            .attr('text-anchor','middle').attr('fill', Math.abs(norm) > 0.5 ? 'white' : '#ccc')
+            .attr('font-size','.5rem').text(val.toFixed(2));
+        }
+      });
+    });
+  }
 }
 
 function renderEcDonut() {
