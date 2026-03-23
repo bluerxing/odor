@@ -1,0 +1,749 @@
+[
+  {
+    "code": "1",
+    "name": "Oxidoreductases",
+    "count": 173905,
+    "children": [
+      {
+        "code": "1.1",
+        "name": "Acting on CH-OH",
+        "count": 47385,
+        "children": [
+          {
+            "code": "1.1.1",
+            "name": "Alcohol dehydrogenases",
+            "count": 41121
+          },
+          {
+            "code": "1.1.2",
+            "name": "EC 1.1.2",
+            "count": 3078
+          },
+          {
+            "code": "1.1.3",
+            "name": "EC 1.1.3",
+            "count": 2149
+          },
+          {
+            "code": "1.1.99",
+            "name": "EC 1.1.99",
+            "count": 1037
+          }
+        ]
+      },
+      {
+        "code": "1.11",
+        "name": "EC 1.11",
+        "count": 3079,
+        "children": [
+          {
+            "code": "1.11.1",
+            "name": "EC 1.11.1",
+            "count": 3079
+          }
+        ]
+      },
+      {
+        "code": "1.13",
+        "name": "EC 1.13",
+        "count": 8808,
+        "children": [
+          {
+            "code": "1.13.11",
+            "name": "EC 1.13.11",
+            "count": 7889
+          },
+          {
+            "code": "1.13.12",
+            "name": "EC 1.13.12",
+            "count": 919
+          }
+        ]
+      },
+      {
+        "code": "1.14",
+        "name": "Acting on paired donors (oxygenases)",
+        "count": 49432,
+        "children": [
+          {
+            "code": "1.14.12",
+            "name": "EC 1.14.12",
+            "count": 3054
+          },
+          {
+            "code": "1.14.13",
+            "name": "Monooxygenases (NADH/NADPH)",
+            "count": 20552
+          },
+          {
+            "code": "1.14.14",
+            "name": "Monooxygenases (CYP450)",
+            "count": 11988
+          },
+          {
+            "code": "1.14.15",
+            "name": "EC 1.14.15",
+            "count": 6743
+          },
+          {
+            "code": "1.14.17",
+            "name": "EC 1.14.17",
+            "count": 111
+          },
+          {
+            "code": "1.14.18",
+            "name": "EC 1.14.18",
+            "count": 264
+          },
+          {
+            "code": "1.14.99",
+            "name": "EC 1.14.99",
+            "count": 6720
+          }
+        ]
+      },
+      {
+        "code": "1.17",
+        "name": "EC 1.17",
+        "count": 4106,
+        "children": [
+          {
+            "code": "1.17.9",
+            "name": "EC 1.17.9",
+            "count": 3557
+          },
+          {
+            "code": "1.17.99",
+            "name": "EC 1.17.99",
+            "count": 549
+          }
+        ]
+      },
+      {
+        "code": "1.2",
+        "name": "Acting on aldehyde/oxo",
+        "count": 33430,
+        "children": [
+          {
+            "code": "1.2.1",
+            "name": "EC 1.2.1",
+            "count": 18532
+          },
+          {
+            "code": "1.2.3",
+            "name": "EC 1.2.3",
+            "count": 3483
+          },
+          {
+            "code": "1.2.4",
+            "name": "EC 1.2.4",
+            "count": 1188
+          },
+          {
+            "code": "1.2.5",
+            "name": "EC 1.2.5",
+            "count": 3704
+          },
+          {
+            "code": "1.2.7",
+            "name": "EC 1.2.7",
+            "count": 21
+          },
+          {
+            "code": "1.2.98",
+            "name": "EC 1.2.98",
+            "count": 2122
+          },
+          {
+            "code": "1.2.99",
+            "name": "EC 1.2.99",
+            "count": 4380
+          }
+        ]
+      },
+      {
+        "code": "1.21",
+        "name": "EC 1.21",
+        "count": 873,
+        "children": [
+          {
+            "code": "1.21.4",
+            "name": "EC 1.21.4",
+            "count": 873
+          }
+        ]
+      },
+      {
+        "code": "1.3",
+        "name": "Acting on CH-CH",
+        "count": 5805,
+        "children": [
+          {
+            "code": "1.3.1",
+            "name": "EC 1.3.1",
+            "count": 2457
+          },
+          {
+            "code": "1.3.2",
+            "name": "EC 1.3.2",
+            "count": 807
+          },
+          {
+            "code": "1.3.8",
+            "name": "EC 1.3.8",
+            "count": 1695
+          },
+          {
+            "code": "1.3.99",
+            "name": "EC 1.3.99",
+            "count": 846
+          }
+        ]
+      },
+      {
+        "code": "1.4",
+        "name": "Acting on CH-NH2",
+        "count": 11573,
+        "children": [
+          {
+            "code": "1.4.1",
+            "name": "EC 1.4.1",
+            "count": 2443
+          },
+          {
+            "code": "1.4.3",
+            "name": "EC 1.4.3",
+            "count": 6931
+          },
+          {
+            "code": "1.4.9",
+            "name": "EC 1.4.9",
+            "count": 2199
+          }
+        ]
+      },
+      {
+        "code": "1.5",
+        "name": "EC 1.5",
+        "count": 4372,
+        "children": [
+          {
+            "code": "1.5.1",
+            "name": "EC 1.5.1",
+            "count": 1133
+          },
+          {
+            "code": "1.5.3",
+            "name": "EC 1.5.3",
+            "count": 1090
+          },
+          {
+            "code": "1.5.8",
+            "name": "EC 1.5.8",
+            "count": 499
+          },
+          {
+            "code": "1.5.99",
+            "name": "EC 1.5.99",
+            "count": 1650
+          }
+        ]
+      },
+      {
+        "code": "1.7",
+        "name": "EC 1.7",
+        "count": 234,
+        "children": [
+          {
+            "code": "1.7.2",
+            "name": "EC 1.7.2",
+            "count": 234
+          }
+        ]
+      },
+      {
+        "code": "1.8",
+        "name": "Acting on sulfur",
+        "count": 4808,
+        "children": [
+          {
+            "code": "1.8.1",
+            "name": "EC 1.8.1",
+            "count": 132
+          },
+          {
+            "code": "1.8.3",
+            "name": "EC 1.8.3",
+            "count": 4087
+          },
+          {
+            "code": "1.8.4",
+            "name": "EC 1.8.4",
+            "count": 205
+          },
+          {
+            "code": "1.8.5",
+            "name": "EC 1.8.5",
+            "count": 384
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "2",
+    "name": "Transferases",
+    "count": 142473,
+    "children": [
+      {
+        "code": "2.1",
+        "name": "Transferring one-carbon groups",
+        "count": 23391,
+        "children": [
+          {
+            "code": "2.1.1",
+            "name": "Methyltransferases",
+            "count": 21585
+          },
+          {
+            "code": "2.1.2",
+            "name": "EC 2.1.2",
+            "count": 617
+          },
+          {
+            "code": "2.1.3",
+            "name": "EC 2.1.3",
+            "count": 1039
+          },
+          {
+            "code": "2.1.4",
+            "name": "EC 2.1.4",
+            "count": 150
+          }
+        ]
+      },
+      {
+        "code": "2.2",
+        "name": "EC 2.2",
+        "count": 7409,
+        "children": [
+          {
+            "code": "2.2.1",
+            "name": "EC 2.2.1",
+            "count": 7409
+          }
+        ]
+      },
+      {
+        "code": "2.3",
+        "name": "Acyltransferases",
+        "count": 26360,
+        "children": [
+          {
+            "code": "2.3.1",
+            "name": "Acyltransferases",
+            "count": 26048
+          },
+          {
+            "code": "2.3.2",
+            "name": "EC 2.3.2",
+            "count": 312
+          }
+        ]
+      },
+      {
+        "code": "2.4",
+        "name": "EC 2.4",
+        "count": 1619,
+        "children": [
+          {
+            "code": "2.4.1",
+            "name": "EC 2.4.1",
+            "count": 1265
+          },
+          {
+            "code": "2.4.2",
+            "name": "EC 2.4.2",
+            "count": 354
+          }
+        ]
+      },
+      {
+        "code": "2.5",
+        "name": "Transferring alkyl/aryl",
+        "count": 15911,
+        "children": [
+          {
+            "code": "2.5.1",
+            "name": "Prenyltransferases",
+            "count": 15911
+          }
+        ]
+      },
+      {
+        "code": "2.6",
+        "name": "Transferring nitrogenous",
+        "count": 52850,
+        "children": [
+          {
+            "code": "2.6.1",
+            "name": "EC 2.6.1",
+            "count": 31894
+          },
+          {
+            "code": "2.6.3",
+            "name": "EC 2.6.3",
+            "count": 20956
+          }
+        ]
+      },
+      {
+        "code": "2.7",
+        "name": "Phosphotransferases",
+        "count": 3366,
+        "children": [
+          {
+            "code": "2.7.1",
+            "name": "EC 2.7.1",
+            "count": 2487
+          },
+          {
+            "code": "2.7.3",
+            "name": "EC 2.7.3",
+            "count": 879
+          }
+        ]
+      },
+      {
+        "code": "2.8",
+        "name": "EC 2.8",
+        "count": 11567,
+        "children": [
+          {
+            "code": "2.8.1",
+            "name": "EC 2.8.1",
+            "count": 1843
+          },
+          {
+            "code": "2.8.3",
+            "name": "EC 2.8.3",
+            "count": 9724
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "3",
+    "name": "Hydrolases",
+    "count": 88149,
+    "children": [
+      {
+        "code": "3.1",
+        "name": "Acting on ester bonds",
+        "count": 44092,
+        "children": [
+          {
+            "code": "3.1.1",
+            "name": "Carboxylic-ester hydrolases",
+            "count": 28529
+          },
+          {
+            "code": "3.1.2",
+            "name": "EC 3.1.2",
+            "count": 13804
+          },
+          {
+            "code": "3.1.3",
+            "name": "EC 3.1.3",
+            "count": 276
+          },
+          {
+            "code": "3.1.7",
+            "name": "EC 3.1.7",
+            "count": 1483
+          }
+        ]
+      },
+      {
+        "code": "3.2",
+        "name": "Glycosylases",
+        "count": 1025,
+        "children": [
+          {
+            "code": "3.2.1",
+            "name": "EC 3.2.1",
+            "count": 1025
+          }
+        ]
+      },
+      {
+        "code": "3.4",
+        "name": "EC 3.4",
+        "count": 1418,
+        "children": [
+          {
+            "code": "3.4.11",
+            "name": "EC 3.4.11",
+            "count": 709
+          },
+          {
+            "code": "3.4.13",
+            "name": "EC 3.4.13",
+            "count": 709
+          }
+        ]
+      },
+      {
+        "code": "3.5",
+        "name": "Acting on C-N bonds",
+        "count": 28321,
+        "children": [
+          {
+            "code": "3.5.1",
+            "name": "EC 3.5.1",
+            "count": 23949
+          },
+          {
+            "code": "3.5.2",
+            "name": "EC 3.5.2",
+            "count": 612
+          },
+          {
+            "code": "3.5.3",
+            "name": "EC 3.5.3",
+            "count": 44
+          },
+          {
+            "code": "3.5.4",
+            "name": "EC 3.5.4",
+            "count": 786
+          },
+          {
+            "code": "3.5.5",
+            "name": "EC 3.5.5",
+            "count": 1841
+          },
+          {
+            "code": "3.5.99",
+            "name": "EC 3.5.99",
+            "count": 1089
+          }
+        ]
+      },
+      {
+        "code": "3.7",
+        "name": "EC 3.7",
+        "count": 13025,
+        "children": [
+          {
+            "code": "3.7.1",
+            "name": "EC 3.7.1",
+            "count": 13025
+          }
+        ]
+      },
+      {
+        "code": "3.8",
+        "name": "EC 3.8",
+        "count": 268,
+        "children": [
+          {
+            "code": "3.8.1",
+            "name": "EC 3.8.1",
+            "count": 268
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "4",
+    "name": "Lyases",
+    "count": 167084,
+    "children": [
+      {
+        "code": "4.1",
+        "name": "Carbon-carbon lyases",
+        "count": 117579,
+        "children": [
+          {
+            "code": "4.1.1",
+            "name": "Carboxy-lyases (decarboxylases)",
+            "count": 26541
+          },
+          {
+            "code": "4.1.2",
+            "name": "Aldehyde-lyases",
+            "count": 17933
+          },
+          {
+            "code": "4.1.3",
+            "name": "Oxo-acid-lyases",
+            "count": 33922
+          },
+          {
+            "code": "4.1.99",
+            "name": "Other carbon-carbon lyases",
+            "count": 39183
+          }
+        ]
+      },
+      {
+        "code": "4.2",
+        "name": "Carbon-oxygen lyases",
+        "count": 36751,
+        "children": [
+          {
+            "code": "4.2.1",
+            "name": "EC 4.2.1",
+            "count": 3016
+          },
+          {
+            "code": "4.2.3",
+            "name": "Carbon-oxygen lyases (terpene cyclases)",
+            "count": 32907
+          },
+          {
+            "code": "4.2.99",
+            "name": "EC 4.2.99",
+            "count": 828
+          }
+        ]
+      },
+      {
+        "code": "4.3",
+        "name": "Carbon-nitrogen lyases",
+        "count": 8258,
+        "children": [
+          {
+            "code": "4.3.1",
+            "name": "EC 4.3.1",
+            "count": 3601
+          },
+          {
+            "code": "4.3.2",
+            "name": "EC 4.3.2",
+            "count": 1194
+          },
+          {
+            "code": "4.3.3",
+            "name": "EC 4.3.3",
+            "count": 1614
+          },
+          {
+            "code": "4.3.99",
+            "name": "EC 4.3.99",
+            "count": 1849
+          }
+        ]
+      },
+      {
+        "code": "4.4",
+        "name": "EC 4.4",
+        "count": 4496,
+        "children": [
+          {
+            "code": "4.4.1",
+            "name": "EC 4.4.1",
+            "count": 4496
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "5",
+    "name": "Isomerases",
+    "count": 720,
+    "children": [
+      {
+        "code": "5.3",
+        "name": "Intramolecular oxidoreductases",
+        "count": 189,
+        "children": [
+          {
+            "code": "5.3.3",
+            "name": "EC 5.3.3",
+            "count": 9
+          },
+          {
+            "code": "5.3.99",
+            "name": "EC 5.3.99",
+            "count": 180
+          }
+        ]
+      },
+      {
+        "code": "5.4",
+        "name": "Intramolecular transferases",
+        "count": 531,
+        "children": [
+          {
+            "code": "5.4.4",
+            "name": "EC 5.4.4",
+            "count": 531
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "code": "6",
+    "name": "Ligases",
+    "count": 23722,
+    "children": [
+      {
+        "code": "6.2",
+        "name": "Forming C-S bonds (CoA ligases)",
+        "count": 14545,
+        "children": [
+          {
+            "code": "6.2.1",
+            "name": "Acid-thiol ligases (CoA ligases)",
+            "count": 14545
+          }
+        ]
+      },
+      {
+        "code": "6.3",
+        "name": "EC 6.3",
+        "count": 5700,
+        "children": [
+          {
+            "code": "6.3.1",
+            "name": "EC 6.3.1",
+            "count": 1054
+          },
+          {
+            "code": "6.3.2",
+            "name": "EC 6.3.2",
+            "count": 1402
+          },
+          {
+            "code": "6.3.4",
+            "name": "EC 6.3.4",
+            "count": 2397
+          },
+          {
+            "code": "6.3.5",
+            "name": "EC 6.3.5",
+            "count": 847
+          }
+        ]
+      },
+      {
+        "code": "6.4",
+        "name": "EC 6.4",
+        "count": 3477,
+        "children": [
+          {
+            "code": "6.4.1",
+            "name": "EC 6.4.1",
+            "count": 3477
+          }
+        ]
+      }
+    ]
+  }
+]
