@@ -534,6 +534,17 @@ section { margin-bottom: 56px; }
 }
 span.odor { color: var(--orange); font-weight: 600; }
 span.ec   { color: var(--blue); font-weight: 600; }
+.ec-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: rgba(230,159,0,.18);
+  color: var(--orange);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  margin: 0 1px;
+}
 span.op   { color: var(--green); font-weight: 700; }
 
 /* Evidence */
@@ -882,6 +893,18 @@ function onDataReady() {
   loadStats();
   renderDashboard();
   renderEcHierarchy();
+
+  // Resolve Order Sensitivity defaults from actual data
+  const orderDef = DISCOVERY_DEFS.find(d => d.id === 'order');
+  if (orderDef && REASONING_ORDER) {
+    const firstKey = Object.keys(REASONING_ORDER)[0];
+    if (firstKey) {
+      const parts = firstKey.split(',');
+      orderDef.defaults.ec1 = parts[0];
+      orderDef.defaults.ec2 = parts[1];
+    }
+  }
+
   buildDiscoveryCards();
   // Staggered auto-run of default examples
   setTimeout(() => autoRunCard(0), 400);
@@ -919,6 +942,11 @@ function highlightFOL(s) {
   h = h.replace(/\b(\d+\.\d+\.\d+(?:\.\d+)?)\b/g, '<span class="ec">$1</span>');
   h = h.replace(/([&and;&or;&rarr;&not;&perp;])/g, '<span class="op">$1</span>');
   return h;
+}
+
+function formatEcSequence(seq) {
+  if (typeof seq === 'string') seq = seq.split(',');
+  return seq.map(ec => `<span class="ec-badge">${esc(ec.trim())}</span>`).join(' &rarr; ');
 }
 
 function toggleEvidence(btn) {
@@ -959,6 +987,43 @@ function hideError(id) { document.getElementById(id).classList.add('hidden'); }
 /* ----------------------------------------------------------------
    EC Hierarchy Explorer
    ---------------------------------------------------------------- */
+const EC_SUB_NAMES = {
+  '1.1.1': 'Alcohol dehydrogenases',
+  '1.1.2': 'Acting on other acceptors',
+  '1.1.3': 'Acting on oxygen',
+  '1.1.99': 'Acting on other acceptors',
+  '1.2.1': 'Aldehyde dehydrogenases',
+  '1.3.1': 'Acting on CH-CH (NAD/NADP)',
+  '1.4.3': 'Amino acid oxidases',
+  '1.8.1': 'Acting on sulfur (NAD/NADP)',
+  '1.13.11': 'Dioxygenases',
+  '1.14.13': 'Monooxygenases (NADH/NADPH)',
+  '1.14.14': 'Monooxygenases (CYP450)',
+  '2.1.1': 'Methyltransferases',
+  '2.2.1': 'Aldehyde/ketone transferases',
+  '2.3.1': 'Acyltransferases',
+  '2.5.1': 'Prenyltransferases',
+  '2.6.1': 'Aminotransferases',
+  '2.6.3': 'Oximinotransferases',
+  '2.7.1': 'Phosphotransferases (alcohol)',
+  '2.8.1': 'Sulfurtransferases',
+  '3.1.1': 'Carboxylic-ester hydrolases',
+  '3.2.1': 'Glycosidases',
+  '3.5.1': 'Acting on linear amides',
+  '3.5.99': 'Acting on other C-N bonds',
+  '3.7.1': 'Acting on C-C bonds (ketonic)',
+  '4.1.1': 'Carboxy-lyases (decarboxylases)',
+  '4.1.2': 'Aldehyde-lyases',
+  '4.1.3': 'Oxo-acid-lyases',
+  '4.1.99': 'Other carbon-carbon lyases',
+  '4.2.1': 'Hydro-lyases (dehydratases)',
+  '4.2.3': 'Carbon-oxygen lyases (terpene cyclases)',
+  '4.3.1': 'Ammonia-lyases',
+  '5.3.3': 'Intramolecular oxidoreductases',
+  '5.4.99': 'Intramolecular transferases (other)',
+  '6.2.1': 'Acid-thiol ligases (CoA ligases)',
+};
+
 function renderEcHierarchy() {
   const container = document.getElementById('ecTree');
   const totalCount = EC_HIERARCHY.reduce((s, n) => s + n.count, 0);
@@ -970,10 +1035,19 @@ function renderEcHierarchy() {
     const hasChildren = node.children && node.children.length > 0;
     const color = ecColors[colorIdx % ecColors.length];
 
+    // If the name starts with "EC " (no descriptive name), look up in EC_SUB_NAMES
+    let displayName = node.name;
+    if (displayName && displayName.startsWith('EC ')) {
+      const code = node.code || displayName.replace('EC ', '').trim();
+      if (EC_SUB_NAMES[code]) {
+        displayName = EC_SUB_NAMES[code];
+      }
+    }
+
     let html = `<div class="ec-node">`;
     html += `<div class="ec-node-header" onclick="toggleEcNode(this)">`;
     html += `<span class="ec-node-toggle ${hasChildren ? '' : 'leaf'}">&#9654;</span>`;
-    html += `<span class="ec-node-label"><span class="ec-code">${esc(node.code)}</span><span class="ec-name">${esc(node.name)}</span></span>`;
+    html += `<span class="ec-node-label"><span class="ec-code">${esc(node.code)}</span><span class="ec-name">${esc(displayName)}</span></span>`;
     html += `<span class="ec-node-count">${node.count.toLocaleString()} (${pct}%)</span>`;
     html += `<span class="ec-node-bar-track"><span class="ec-node-bar-fill" style="width:${barPct}%;background:${color}"></span></span>`;
     html += `</div>`;
@@ -1009,124 +1083,221 @@ window.toggleEcNode = function(header) {
 /* ----------------------------------------------------------------
    D3.js Dashboard Charts
    ---------------------------------------------------------------- */
+const WONG = ['#E69F00','#56B4E9','#009E73','#F0E442','#0072B2','#D55E00','#CC79A7','#999999'];
+let vizData = null;
+
 function renderDashboard() {
-  renderDonutChart();
-  renderButterflyChart();
-  renderLollipopChart();
-  renderRuleTypeChart();
+  vizData = VIZ_DATA;
+  renderEcDonut();
+  renderAsymmetry();
+  renderLengths();
+  renderRuleTypes();
 }
 
-function renderDonutChart() {
-  const data = VIZ_DATA.ec_classes;
-  if (!data) return;
-  const container = d3.select('#chartEcClass');
-  const W = 340, H = 280, R = Math.min(W, H) / 2 - 20;
-  const svg = container.append('svg').attr('viewBox', `0 0 ${W} ${H}`);
-  const g = svg.append('g').attr('transform', `translate(${W/2 - 40},${H/2})`);
+function renderEcDonut() {
+  if (!vizData || !vizData.ec_classes?.length) return;
+  const data = vizData.ec_classes;
   const total = d3.sum(data, d => d.count);
-  const colors = ['#D55E00','#0072B2','#009E73','#CC79A7','#E69F00','#F0E442'];
+  const W = 280, H = 280, R = 110, r = 60;
+  const container = document.getElementById('chartEcClass');
+  container.innerHTML = '';
+
+  // Use abbreviated names to avoid truncation
+  const abbrevNames = {'Oxidoreductase':'Oxidored.','Transferase':'Transfer.','Hydrolase':'Hydrol.','Lyase':'Lyase','Isomerase':'Isomer.','Ligase':'Ligase'};
+
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', [0, 0, W + 160, H])
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  const g = svg.append('g').attr('transform', `translate(${W/2},${H/2})`);
+
   const pie = d3.pie().value(d => d.count).sort(null);
-  const arc = d3.arc().innerRadius(R * 0.55).outerRadius(R);
-  const arcs = g.selectAll('.arc').data(pie(data)).enter().append('g');
-  arcs.append('path').attr('d', arc).attr('fill', (d,i) => colors[i]).attr('stroke', '#0a0a0a').attr('stroke-width', 2);
-  // Legend
-  const legend = svg.append('g').attr('transform', `translate(${W - 130}, 30)`);
+  const arc = d3.arc().innerRadius(r).outerRadius(R);
+  const arcs = pie(data);
+
+  g.selectAll('path').data(arcs).join('path')
+    .attr('d', arc)
+    .attr('fill', (d, i) => WONG[i % WONG.length])
+    .attr('stroke', '#1e293b')
+    .attr('stroke-width', 2);
+
+  // Center text
+  g.append('text').attr('text-anchor','middle').attr('dy','-0.2em')
+    .attr('fill','#e2e8f0').attr('font-size','1.4rem').attr('font-weight','700')
+    .text(total.toLocaleString());
+  g.append('text').attr('text-anchor','middle').attr('dy','1.2em')
+    .attr('fill','#94a3b8').attr('font-size','0.7rem').text('annotations');
+
+  // Legend with abbreviated names
+  const leg = svg.append('g').attr('transform', `translate(${W + 10}, ${H/2 - data.length * 11})`);
   data.forEach((d, i) => {
-    const row = legend.append('g').attr('transform', `translate(0,${i * 20})`);
-    row.append('rect').attr('width', 12).attr('height', 12).attr('rx', 2).attr('fill', colors[i]);
-    const pct = (d.count / total * 100).toFixed(0);
-    row.append('text').attr('x', 18).attr('y', 10).text(`EC ${d.class} (${pct}%)`).attr('fill', '#94a3b8').attr('font-size', '0.72rem');
+    const pct = ((d.count / total) * 100).toFixed(1);
+    const shortName = abbrevNames[d.name] || d.name;
+    const row = leg.append('g').attr('transform', `translate(0, ${i * 22})`);
+    row.append('rect').attr('width',12).attr('height',12).attr('rx',2)
+      .attr('fill', WONG[i % WONG.length]);
+    row.append('text').attr('x',16).attr('y',10).attr('fill','#e2e8f0')
+      .attr('font-size','0.72rem').text(`${shortName} (${pct}%)`);
   });
 }
 
-function renderButterflyChart() {
-  const data = VIZ_DATA.asymmetry;
-  if (!data) return;
-  // Sort by total and take top 15
-  const sorted = [...data].sort((a,b) => (b.source+b.target)-(a.source+a.target)).slice(0, 15);
-  const container = d3.select('#chartAsymmetry');
-  const margin = {top: 10, right: 15, bottom: 25, left: 70};
-  const W = 460, H = Math.max(280, sorted.length * 20 + margin.top + margin.bottom);
-  const svg = container.append('svg').attr('viewBox', `0 0 ${W} ${H}`);
-  const w = W - margin.left - margin.right;
-  const h = H - margin.top - margin.bottom;
-  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-  const maxVal = d3.max(sorted, d => Math.max(d.source, d.target));
-  const xLeft = d3.scaleLinear().domain([0, maxVal]).range([w/2, 0]);
-  const xRight = d3.scaleLinear().domain([0, maxVal]).range([w/2, w]);
-  const y = d3.scaleBand().domain(sorted.map(d => d.odor)).range([0, h]).padding(0.25);
-  g.selectAll('.bar-source').data(sorted).enter().append('rect')
-    .attr('x', d => xLeft(d.source)).attr('y', d => y(d.odor)).attr('width', d => w/2 - xLeft(d.source)).attr('height', y.bandwidth())
-    .attr('fill', '#D55E00').attr('rx', 2);
-  g.selectAll('.bar-target').data(sorted).enter().append('rect')
-    .attr('x', w/2).attr('y', d => y(d.odor)).attr('width', d => xRight(d.target) - w/2).attr('height', y.bandwidth())
-    .attr('fill', '#0072B2').attr('rx', 2);
-  g.selectAll('.label').data(sorted).enter().append('text')
-    .attr('x', w/2).attr('y', d => y(d.odor) + y.bandwidth()/2 + 1).attr('text-anchor', 'middle')
-    .text(d => d.odor.length > 10 ? d.odor.slice(0,9)+'.' : d.odor).attr('fill', '#e2e8f0').attr('font-size', '0.62rem').attr('dominant-baseline', 'middle');
-  // Axis labels
-  g.append('text').attr('x', w/4).attr('y', h + 18).text('Source').attr('fill', '#D55E00').attr('font-size', '0.7rem').attr('text-anchor', 'middle');
-  g.append('text').attr('x', 3*w/4).attr('y', h + 18).text('Target').attr('fill', '#0072B2').attr('font-size', '0.7rem').attr('text-anchor', 'middle');
+function renderAsymmetry() {
+  if (!vizData || !vizData.asymmetry?.length) return;
+  const data = vizData.asymmetry;
+  const container = document.getElementById('chartAsymmetry');
+  container.innerHTML = '';
+
+  const margin = {top: 10, right: 10, bottom: 20, left: 0};
+  const W = 520, barH = 16, gap = 5;
+  const H = margin.top + margin.bottom + data.length * (barH + gap);
+  const mid = W / 2;
+
+  const maxVal = Math.max(...data.map(d => Math.max(d.source, d.target)));
+  const labelW = 70; // fixed width for center odor labels
+  const xScale = d3.scaleLinear().domain([0, maxVal]).range([0, mid - labelW/2 - 10]);
+
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', [0, 0, W, H])
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  const g = svg.append('g').attr('transform', `translate(0,${margin.top})`);
+
+  data.forEach((d, i) => {
+    const y = i * (barH + gap);
+    const leftEnd = mid - labelW/2;  // source bars end here
+    const rightStart = mid + labelW/2; // target bars start here
+    // Source bar (left, growing leftward)
+    g.append('rect')
+      .attr('x', leftEnd - xScale(d.source)).attr('y', y)
+      .attr('width', xScale(d.source)).attr('height', barH)
+      .attr('fill', '#0072B2').attr('rx', 2);
+    // Source count label (outside bar, left)
+    g.append('text').attr('x', leftEnd - xScale(d.source) - 4).attr('y', y + barH/2 + 4)
+      .attr('fill','#94a3b8').attr('font-size','0.55rem').attr('text-anchor','end').text(d.source);
+    // Target bar (right)
+    g.append('rect')
+      .attr('x', rightStart).attr('y', y)
+      .attr('width', xScale(d.target)).attr('height', barH)
+      .attr('fill', '#E69F00').attr('rx', 2);
+    // Target count label (outside bar, right)
+    g.append('text').attr('x', rightStart + xScale(d.target) + 4).attr('y', y + barH/2 + 4)
+      .attr('fill','#94a3b8').attr('font-size','0.55rem').text(d.target);
+    // Odor label (in the center gap, never overlaps bars)
+    g.append('text').attr('x', mid).attr('y', y + barH/2 + 4)
+      .attr('text-anchor','middle').attr('fill','#e2e8f0')
+      .attr('font-size','0.6rem').attr('font-weight','600').text(d.odor);
+  });
+
+  // Legend
+  const ly = H - 14;
+  g.append('rect').attr('x', mid - 120).attr('y', ly).attr('width',10).attr('height',10).attr('fill','#0072B2').attr('rx',2);
+  g.append('text').attr('x', mid - 106).attr('y', ly + 9).attr('fill','#94a3b8').attr('font-size','0.65rem').text('Source');
+  g.append('rect').attr('x', mid + 10).attr('y', ly).attr('width',10).attr('height',10).attr('fill','#E69F00').attr('rx',2);
+  g.append('text').attr('x', mid + 24).attr('y', ly + 9).attr('fill','#94a3b8').attr('font-size','0.65rem').text('Target');
 }
 
-function renderLollipopChart() {
-  const data = VIZ_DATA.lengths;
-  if (!data) return;
-  const container = d3.select('#chartLengths');
-  const margin = {top: 15, right: 30, bottom: 35, left: 50};
+function renderLengths() {
+  if (!vizData || !vizData.lengths?.length) return;
+  const data = vizData.lengths;
+  const container = document.getElementById('chartLengths');
+  container.innerHTML = '';
+
+  const margin = {top: 20, right: 20, bottom: 40, left: 60};
   const W = 400, H = 260;
-  const svg = container.append('svg').attr('viewBox', `0 0 ${W} ${H}`);
-  const w = W - margin.left - margin.right;
-  const h = H - margin.top - margin.bottom;
+  const iW = W - margin.left - margin.right;
+  const iH = H - margin.top - margin.bottom;
+
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', [0, 0, W, H])
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
   const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-  const x = d3.scaleBand().domain(data.map(d => d.length)).range([0, w]).padding(0.4);
-  const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count)]).range([h, 0]);
-  g.selectAll('.stem').data(data).enter().append('line')
-    .attr('x1', d => x(d.length) + x.bandwidth()/2).attr('x2', d => x(d.length) + x.bandwidth()/2)
-    .attr('y1', h).attr('y2', d => y(d.count)).attr('stroke', '#0072B2').attr('stroke-width', 2);
-  g.selectAll('.dot').data(data).enter().append('circle')
-    .attr('cx', d => x(d.length) + x.bandwidth()/2).attr('cy', d => y(d.count)).attr('r', 5).attr('fill', '#E69F00');
-  g.selectAll('.val').data(data).enter().append('text')
-    .attr('x', d => x(d.length) + x.bandwidth()/2).attr('y', d => y(d.count) - 10)
-    .text(d => d.count.toLocaleString()).attr('fill', '#94a3b8').attr('font-size', '0.68rem').attr('text-anchor', 'middle');
-  g.append('g').attr('transform', `translate(0,${h})`).call(d3.axisBottom(x).tickFormat(d => `${d} step${d>1?'s':''}`))
-    .selectAll('text').attr('fill', '#94a3b8').attr('font-size', '0.7rem');
-  g.selectAll('.domain, .tick line').attr('stroke', '#334155');
+
+  const x = d3.scalePoint().domain(data.map(d => d.length)).range([0, iW]).padding(0.5);
+  const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count)]).nice().range([iH, 0]);
+
+  // Axes
+  g.append('g').attr('transform', `translate(0,${iH})`)
+    .call(d3.axisBottom(x).tickFormat(d => d + ' steps'))
+    .selectAll('text').attr('fill','#94a3b8').attr('font-size','0.7rem');
+  g.selectAll('.domain, .tick line').attr('stroke','#334155');
+
+  g.append('g').call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(',.0f')))
+    .selectAll('text').attr('fill','#94a3b8').attr('font-size','0.7rem');
+  g.selectAll('.domain, .tick line').attr('stroke','#334155');
+
+  // Lollipop stems
+  data.forEach((d, i) => {
+    g.append('line')
+      .attr('x1', x(d.length)).attr('x2', x(d.length))
+      .attr('y1', y(d.count)).attr('y2', iH)
+      .attr('stroke', WONG[i % WONG.length]).attr('stroke-width', 2);
+    g.append('circle')
+      .attr('cx', x(d.length)).attr('cy', y(d.count))
+      .attr('r', 6).attr('fill', WONG[i % WONG.length]);
+    g.append('text')
+      .attr('x', x(d.length)).attr('y', y(d.count) - 10)
+      .attr('text-anchor','middle').attr('fill','#e2e8f0')
+      .attr('font-size','0.7rem').attr('font-weight','600')
+      .text(d.count.toLocaleString());
+  });
 }
 
-function renderRuleTypeChart() {
-  const data = VIZ_DATA.rule_dist;
-  if (!data) return;
-  const sorted = [...data].sort((a,b) => b.count - a.count);
-  const container = d3.select('#chartRuleTypes');
-  const margin = {top: 10, right: 50, bottom: 10, left: 120};
-  const W = 460, H = Math.max(250, sorted.length * 28 + margin.top + margin.bottom);
-  const svg = container.append('svg').attr('viewBox', `0 0 ${W} ${H}`);
-  const w = W - margin.left - margin.right;
-  const h = H - margin.top - margin.bottom;
+function renderRuleTypes() {
+  if (!vizData || !vizData.rule_dist?.length) return;
+  const data = vizData.rule_dist.sort((a,b) => b.count - a.count);
+  const container = document.getElementById('chartRuleTypes');
+  container.innerHTML = '';
+
+  // Classify hard vs soft
+  const hardTypes = new Set(['exclusion','hard_exclusion','hard_gate','required_ec','necessary_ec','forbidden']);
+  const softTypes = new Set(['soft_gate','disjunctive_source','sufficient_set','conditional_gate','co_occurrence']);
+
+  const margin = {top: 10, right: 40, bottom: 10, left: 130};
+  const barH = 22, gap = 6;
+  const W = 460;
+  const H = margin.top + margin.bottom + data.length * (barH + gap);
+  const iW = W - margin.left - margin.right;
+
+  const maxVal = d3.max(data, d => d.count);
+  const x = d3.scaleLinear().domain([0, maxVal]).range([0, iW]);
+
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', [0, 0, W, H])
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
   const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
-  const shortLabels = {
-    'conditional_necessary': 'cond. necessary',
-    'disjunctive_source': 'disj. source',
-    'mutual_exclusion': 'mutual excl.',
-    'required_ec': 'req. EC',
-    'required_reaction': 'req. reaction',
-    'required_order': 'req. order',
-    'required_subpath': 'req. subpath'
-  };
-  const x = d3.scaleLinear().domain([0, d3.max(sorted, d => d.count)]).range([0, w]);
-  const y = d3.scaleBand().domain(sorted.map(d => d.type)).range([0, h]).padding(0.3);
-  const colors = ['#E69F00','#0072B2','#D55E00','#CC79A7','#009E73','#F0E442','#56B4E9','#999999','#E69F00','#0072B2'];
-  g.selectAll('.bar').data(sorted).enter().append('rect')
-    .attr('x', 0).attr('y', d => y(d.type)).attr('width', d => x(d.count)).attr('height', y.bandwidth())
-    .attr('fill', (d,i) => colors[i % colors.length]).attr('rx', 3);
-  g.selectAll('.label').data(sorted).enter().append('text')
-    .attr('x', -6).attr('y', d => y(d.type) + y.bandwidth()/2)
-    .text(d => shortLabels[d.type] || d.type).attr('fill', '#94a3b8').attr('font-size', '0.7rem')
-    .attr('text-anchor', 'end').attr('dominant-baseline', 'middle');
-  g.selectAll('.val').data(sorted).enter().append('text')
-    .attr('x', d => x(d.count) + 6).attr('y', d => y(d.type) + y.bandwidth()/2)
-    .text(d => d.count.toLocaleString()).attr('fill', '#94a3b8').attr('font-size', '0.68rem').attr('dominant-baseline', 'middle');
+
+  data.forEach((d, i) => {
+    const y = i * (barH + gap);
+    const isHard = hardTypes.has(d.type);
+    const color = isHard ? '#D55E00' : '#009E73';
+
+    g.append('rect')
+      .attr('x', 0).attr('y', y)
+      .attr('width', x(d.count)).attr('height', barH)
+      .attr('fill', color).attr('rx', 3).attr('opacity', 0.85);
+
+    // Label
+    g.append('text')
+      .attr('x', -6).attr('y', y + barH/2 + 4)
+      .attr('text-anchor','end').attr('fill','#e2e8f0')
+      .attr('font-size','0.72rem')
+      .text(d.type.replace(/_/g, ' '));
+
+    // Count
+    g.append('text')
+      .attr('x', x(d.count) + 4).attr('y', y + barH/2 + 4)
+      .attr('fill','#94a3b8').attr('font-size','0.7rem')
+      .text(d.count);
+  });
+
+  // Legend
+  const ly = H - 6;
+  svg.append('rect').attr('x', margin.left).attr('y', ly - 10).attr('width',10).attr('height',10).attr('fill','#D55E00').attr('rx',2);
+  svg.append('text').attr('x', margin.left + 14).attr('y', ly).attr('fill','#94a3b8').attr('font-size','0.65rem').text('Hard rules');
+  svg.append('rect').attr('x', margin.left + 80).attr('y', ly - 10).attr('width',10).attr('height',10).attr('fill','#009E73').attr('rx',2);
+  svg.append('text').attr('x', margin.left + 94).attr('y', ly).attr('fill','#94a3b8').attr('font-size','0.65rem').text('Soft rules');
 }
 
 /* ----------------------------------------------------------------
@@ -1200,7 +1371,7 @@ const DISCOVERY_DEFS = [
       { key: 'ec1', label: 'EC 1', type: 'ec' },
       { key: 'ec2', label: 'EC 2', type: 'ec' }
     ],
-    defaults: { ec1: '1.8.1', ec2: '1.14.13' },
+    defaults: { ec1: null, ec2: null }, // resolved dynamically after data loads
     reason: reasonOrder
   }
 ];
@@ -1926,12 +2097,12 @@ function renderResultBody(r, qt) {
       const barPct = Math.max(4, Math.round((s.weight / maxW) * 100));
       const barClass = s.has_unknown ? 'partial' : 'clean';
       const unknownTag = s.has_unknown ? '<span class="unknown-pill">partial</span>' : '';
-      return `<div class="rule-item" onclick="toggleRuleItem(this)"><div class="rule-head"><span>${highlightFOL(s.seq?.join(' > '))}${unknownTag}</span><span style="color:var(--muted);font-size:0.8rem">weight ${s.weight} &middot; ${s.pathway_count} pathways</span></div><div class="weight-bar-container"><div class="weight-bar ${barClass}" style="width:${barPct}%"></div><span style="font-size:0.72rem;color:var(--muted)">${s.weight}</span></div></div>`;
+      return `<div class="rule-item" onclick="toggleRuleItem(this)"><div class="rule-head"><span>${formatEcSequence(s.seq || [])}${unknownTag}</span><span style="color:var(--muted);font-size:0.8rem">weight ${s.weight} &middot; ${s.pathway_count} pathways</span></div><div class="weight-bar-container"><div class="weight-bar ${barClass}" style="width:${barPct}%"></div><span style="font-size:0.72rem;color:var(--muted)">${s.weight}</span></div></div>`;
     });
     html += '</div>';
     if (r.exclusions?.length) {
       html += '<div class="result-section"><div class="result-section-title">Exclusion Rules</div>';
-      html += truncatedList(r.exclusions, 5, (e) => `<div class="rule-item"><div class="rule-head">${highlightFOL(e.ec_sequence?.join(', '))} > not ${highlightFOL(e.excluded_target)}</div><div class="rule-meta">confidence: ${e.confidence}</div></div>`);
+      html += truncatedList(r.exclusions, 5, (e) => `<div class="rule-item"><div class="rule-head">${formatEcSequence(e.ec_sequence || [])} &rarr; not <span class="odor-pill">${esc(e.excluded_target)}</span></div><div class="rule-meta">confidence: ${e.confidence}</div></div>`);
       html += '</div>';
     }
   }
@@ -1996,7 +2167,7 @@ function renderResultBody(r, qt) {
       html += '<div class="result-section"><div class="result-section-title">Paths Found</div>';
       html += truncatedList(r.paths, 10, (p) => {
         const chain = p.intermediates?.length ? p.intermediates.map(o => `<span class="odor">${esc(o)}</span>`).join(' &rarr; ') : '(direct)';
-        const ecs = (p.ec_sequences||[]).map(s => `[${s.map(e=>`<span class="ec">${esc(e)}</span>`).join(', ')}]`).join(' &rarr; ');
+        const ecs = (p.ec_sequences||[]).map(s => `[${formatEcSequence(s)}]`).join(' &rarr; ');
         return `<div class="rule-item" onclick="toggleRuleItem(this)"><div class="rule-head"><span>${p.total_steps} step(s): ${chain}</span></div><div class="rule-detail" style="padding-top:8px"><div style="font-size:0.82rem">EC sequences: ${ecs}</div></div></div>`;
       });
       html += '</div>';
@@ -2040,7 +2211,7 @@ function renderReasoningResult(result, qt) {
       const steps = p.ec_sequences || [];
       const intermediates = ['source', ...(p.intermediates || []), 'target'];
       html += `<div class="reasoning-step visible" data-step="${pi+1}"><div style="font-weight:600;margin-bottom:6px">Path #${pi+1} (${p.total_steps} step${p.total_steps!==1?'s':''})</div>`;
-      steps.forEach((seq,si) => { html += `<div style="font-size:0.85rem;margin-bottom:4px">Step ${si+1}: <span class="odor">${esc(intermediates[si] || '?')}</span> &rarr; <span class="odor">${esc(intermediates[si+1] || '?')}</span> via [${seq.map(e=>`<span class="ec">${esc(e)}</span>`).join(', ')}]</div>`; });
+      steps.forEach((seq,si) => { html += `<div style="font-size:0.85rem;margin-bottom:4px">Step ${si+1}: <span class="odor">${esc(intermediates[si] || '?')}</span> &rarr; <span class="odor">${esc(intermediates[si+1] || '?')}</span> via [${formatEcSequence(seq)}]</div>`; });
       html += '</div>';
     });
     html += '</div></div>';
