@@ -771,13 +771,13 @@ span.op   { color: var(--green); font-weight: 700; }
     <div class="viz-row">
       <div class="viz-card" style="flex:1; min-width:300px;">
         <h4>Computational Delta Space (PCA)</h4>
-        <p style="color:var(--muted);font-size:.8rem;">Each dot = one metabolic edge's δ-vector. Colored arrows = top RC groups.</p>
-        <div id="chartDualOpenpom" style="width:100%;height:360px;"></div>
+        <p style="color:var(--muted);font-size:.8rem;">Each <span style="color:#555;">●</span> gray dot = one metabolic edge's Δ-vector. <span style="color:#E69F00;">●</span> Colored dots/arrows = edges sharing the same enzyme sequence. Arrows that <strong>cluster together</strong> mean that enzyme sequence imposes a consistent direction.</p>
+        <div id="chartDualOpenpom" style="width:100%;height:390px;"></div>
       </div>
       <div class="viz-card" style="flex:1; min-width:300px;">
         <h4>Human Perceptual Delta Space (PCA)</h4>
-        <p style="color:var(--muted);font-size:.8rem;">Same RC groups, same colors — directions align across independent spaces.</p>
-        <div id="chartDualKeller" style="width:100%;height:360px;"></div>
+        <p style="color:var(--muted);font-size:.8rem;">Same enzyme groups, same colors, but in human-rated perceptual space. If arrows point in <strong>similar directions in both panels</strong>, the enzyme sequence encodes a real perceptual transformation — not a computational artefact.</p>
+        <div id="chartDualKeller" style="width:100%;height:390px;"></div>
       </div>
     </div>
 
@@ -789,10 +789,18 @@ span.op   { color: var(--green); font-weight: 700; }
       </div>
     </div>
 
-    <div style="text-align:center;padding:8px 0;">
-      <p style="color:var(--muted);font-size:.85rem;">
-        <strong style="color:#E69F00;">Key insight:</strong> Neither OpenPOM nor Keller was designed to study odor <em>change</em>.
-        The directional signal was always latent in these static odor maps — our trajectory framework is the first to reveal it.
+    <div style="text-align:center;padding:12px 24px;margin-top:8px;background:linear-gradient(135deg,#1a2744,#162033);border-radius:var(--radius);border:1px solid var(--border);">
+      <p style="color:var(--muted);font-size:.85rem;margin:0;">
+        <strong style="color:#E69F00;">How to read these plots:</strong>
+        Gray dots are individual metabolic transformations projected into odor space.
+        Each colored group shares the <em>same enzyme sequence</em>.
+        If colored arrows cluster tightly (high consistency) and point in similar directions <strong>across both panels</strong>,
+        the enzyme sequence encodes a genuine perceptual transformation direction.
+      </p>
+      <p style="color:var(--muted);font-size:.85rem;margin:8px 0 0 0;">
+        <strong style="color:#009E73;">Why this matters:</strong>
+        Neither of these spaces was built to study odor <em>change</em> — they map static molecule→odor associations.
+        The directional signal was always latent; our enzyme-trajectory framework is the first to reveal it.
       </p>
     </div>
   </section>
@@ -1213,10 +1221,10 @@ function renderDualSpace() {
   const ds = DUAL_SPACE;
   const GCOLORS = ['#0072B2','#E69F00','#009E73','#CC79A7','#8C613C','#D55E00'];
 
-  function drawScatter(containerId, bgPoints, groups, pKey, mKey, pcaVar) {
+  function drawScatter(containerId, bgPoints, groups, pKey, mKey, pcaVar, spaceLabel) {
     const el = document.getElementById(containerId); if (!el) return;
     el.innerHTML = '';
-    const W = 440, H = 340, margin = {top:20, right:20, bottom:40, left:50};
+    const W = 440, H = 370, margin = {top:20, right:20, bottom:50, left:55};
     const iW = W - margin.left - margin.right, iH = H - margin.top - margin.bottom;
 
     const allX = bgPoints.map(p=>p[0]).concat(...groups.map(g=>g[pKey].map(p=>p[0])));
@@ -1270,21 +1278,22 @@ function renderDualSpace() {
       }
     });
 
-    // Compact legend (bottom-right, short labels)
-    const leg = svg.append('g').attr('transform',`translate(${W - margin.right - 120},${H - margin.bottom - groups.length * 11 - 4})`);
+    // Compact legend (bottom-right, numbered with full sequence)
+    const leg = svg.append('g').attr('transform',`translate(${W - margin.right - 140},${H - margin.bottom - groups.length * 11 - 8})`);
+    leg.append('rect').attr('x',-4).attr('y',-4).attr('width',148).attr('height',groups.length*11+8)
+      .attr('fill','rgba(10,10,10,0.7)').attr('rx',4);
     groups.forEach((grp, i) => {
       const row = leg.append('g').attr('transform',`translate(0,${i*11})`);
       row.append('rect').attr('width',8).attr('height',8).attr('rx',2).attr('fill',GCOLORS[i%GCOLORS.length]);
-      // Short label: first and last EC only
       const ecs = grp.ec_sequence;
-      const shortLabel = ecs.length <= 2 ? ecs.join('→') : ecs[0] + '→…→' + ecs[ecs.length-1];
-      row.append('text').attr('x',11).attr('y',8).attr('fill','#94a3b8').attr('font-size','.5rem')
-        .text(`${shortLabel} (n=${grp.n_edges})`);
+      const label = ecs.length <= 3 ? ecs.join('→') : ecs.slice(0,2).join('→') + '→…→' + ecs[ecs.length-1];
+      row.append('text').attr('x',11).attr('y',8).attr('fill','#e2e8f0').attr('font-size','.48rem')
+        .text(`${label} n=${grp.n_edges}`);
     });
   }
 
-  drawScatter('chartDualOpenpom', ds.background.openpom, ds.highlighted_groups, 'openpom_points', 'openpom_mean', ds.pca_variance.openpom);
-  drawScatter('chartDualKeller', ds.background.keller, ds.highlighted_groups, 'keller_points', 'keller_mean', ds.pca_variance.keller);
+  drawScatter('chartDualOpenpom', ds.background.openpom, ds.highlighted_groups, 'openpom_points', 'openpom_mean', ds.pca_variance.openpom, 'Computational');
+  drawScatter('chartDualKeller', ds.background.keller, ds.highlighted_groups, 'keller_points', 'keller_mean', ds.pca_variance.keller, 'Human Perceptual');
 
   // Heatmap
   const hm = ds.heatmap;
