@@ -1,0 +1,2176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Odor Rule Query System</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+/* ================================================================
+   CSS: Dark theme with Wong colorblind-safe accents
+   ================================================================ */
+:root {
+  --bg:       #0f172a;
+  --card:     #1e293b;
+  --card-alt: #263450;
+  --border:   #334155;
+  --text:     #e2e8f0;
+  --muted:    #94a3b8;
+  --orange:   #E69F00;
+  --blue:     #0072B2;
+  --green:    #009E73;
+  --red:      #D55E00;
+  --purple:   #CC79A7;
+  --radius:   10px;
+  --shadow:   0 4px 24px rgba(0,0,0,.35);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+a { color: var(--blue); text-decoration: none; }
+
+/* ---------- Stats bar ---------- */
+.stats-bar {
+  background: linear-gradient(135deg, #162033 0%, #1a2744 100%);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 24px;
+  display: flex;
+  gap: 28px;
+  align-items: center;
+  font-size: 0.85rem;
+  color: var(--muted);
+  flex-wrap: wrap;
+}
+.stats-bar .stat { display: flex; align-items: center; gap: 6px; }
+.stats-bar .stat strong { color: var(--orange); font-size: 1rem; }
+
+/* ---------- Container ---------- */
+.container { max-width: 1200px; margin: 0 auto; padding: 24px 20px 60px; }
+
+/* ---------- Section headers ---------- */
+.section-header {
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--border);
+}
+.section-header h2 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  background: linear-gradient(90deg, var(--orange), var(--purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.section-header p { color: var(--muted); font-size: 0.95rem; margin-top: 4px; }
+
+section { margin-bottom: 48px; }
+
+/* ---------- Grid (Tier 1: showcase) ---------- */
+.showcase-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 18px;
+}
+
+.showcase-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  cursor: pointer;
+  transition: transform .2s, box-shadow .2s, border-color .2s;
+  position: relative;
+  overflow: hidden;
+}
+.showcase-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow);
+  border-color: var(--orange);
+}
+.showcase-card.expanded {
+  grid-column: 1 / -1;
+}
+.showcase-card .card-icon {
+  font-size: 1.8rem;
+  margin-bottom: 8px;
+  display: block;
+}
+.showcase-card .card-title {
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+}
+.showcase-card .card-desc {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.showcase-detail {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .45s ease, opacity .35s ease;
+  opacity: 0;
+}
+.showcase-card.expanded .showcase-detail {
+  max-height: 2000px;
+  opacity: 1;
+  margin-top: 16px;
+}
+
+/* ---------- FOL display ---------- */
+.fol-box {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  background: #0d1320;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-size: 0.92rem;
+  line-height: 1.7;
+  overflow-x: auto;
+  margin-bottom: 12px;
+}
+span.odor { color: var(--orange); font-weight: 600; }
+span.ec   { color: var(--blue); font-weight: 600; }
+span.op   { color: var(--green); font-weight: 700; }
+
+/* ---------- Evidence collapsible ---------- */
+.evidence-section { margin-top: 10px; }
+.evidence-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  transition: background .15s;
+}
+.evidence-toggle:hover { background: var(--card-alt); }
+.evidence-toggle .arrow {
+  transition: transform .25s;
+  display: inline-block;
+}
+.evidence-toggle.open .arrow { transform: rotate(90deg); }
+
+.evidence-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .4s ease;
+}
+.evidence-body.open {
+  max-height: 3000px;
+}
+.evidence-body-inner {
+  padding: 12px 0 4px;
+}
+
+/* ---------- Query panels (Tier 2 & 3) ---------- */
+.query-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+.query-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+  margin-bottom: 18px;
+}
+.query-controls .field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 160px;
+  flex: 1;
+}
+.query-controls .field label {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  font-weight: 600;
+}
+.query-controls select,
+.query-controls input[type="text"],
+.query-controls input[type="number"] {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .2s;
+}
+.query-controls select:focus,
+.query-controls input:focus {
+  border-color: var(--blue);
+}
+
+.btn {
+  background: linear-gradient(135deg, var(--blue), #005a8e);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 24px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .2s, transform .1s;
+  white-space: nowrap;
+}
+.btn:hover { opacity: .9; }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ---------- Result display ---------- */
+.result-box {
+  background: #0d1320;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-top: 16px;
+}
+.result-box.hidden { display: none; }
+
+.result-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.badge-yes { background: rgba(0,158,115,.18); color: var(--green); }
+.badge-no  { background: rgba(213,94,0,.18);  color: var(--red); }
+.badge-list { background: rgba(0,114,178,.18); color: var(--blue); }
+
+.result-section {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+}
+.result-section:last-child { border-bottom: none; }
+.result-section-title {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: .5px;
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.rule-item {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.82rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+.rule-item:hover { border-color: var(--orange); }
+.rule-item .rule-head { display: flex; justify-content: space-between; align-items: center; }
+.rule-item .rule-meta { color: var(--muted); font-size: 0.78rem; margin-top: 4px; }
+.rule-item .rule-detail {
+  max-height: 0; overflow: hidden;
+  transition: max-height .35s ease;
+}
+.rule-item.open .rule-detail { max-height: 600px; }
+
+.pathway-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.pathway-entry {
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding: 4px 8px;
+  background: var(--card);
+  border-radius: 4px;
+}
+
+/* ---------- Reasoning chain (Tier 3) ---------- */
+.reasoning-chain {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.reasoning-step {
+  position: relative;
+  padding: 14px 18px 14px 40px;
+  border-left: 3px solid var(--border);
+  margin-left: 14px;
+}
+.reasoning-step::before {
+  content: attr(data-step);
+  position: absolute;
+  left: -14px;
+  top: 12px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.reasoning-step:last-child { border-left-color: transparent; }
+.reasoning-step:last-child::before { background: var(--green); }
+
+/* ---------- Loading spinner ---------- */
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--orange);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-overlay {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 32px;
+  color: var(--muted);
+}
+.loading-overlay.visible { display: flex; }
+
+/* ---------- Error ---------- */
+.error-msg {
+  background: rgba(213,94,0,.12);
+  border: 1px solid var(--red);
+  color: var(--red);
+  border-radius: 6px;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  margin-top: 12px;
+}
+.error-msg.hidden { display: none; }
+
+/* ---------- Weight bar (horizontal inline bar chart) ---------- */
+.weight-bar-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.weight-bar {
+  height: 6px;
+  border-radius: 3px;
+  min-width: 4px;
+  transition: width .3s ease;
+}
+.weight-bar.clean { background: var(--green); }
+.weight-bar.partial { background: var(--muted); }
+
+/* ---------- Unknown indicator pill ---------- */
+.unknown-pill {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: rgba(148,163,184,.18);
+  color: var(--muted);
+  margin-left: 6px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+/* ---------- Progress bar (confidence / reduction) ---------- */
+.progress-bar-track {
+  width: 100%;
+  max-width: 180px;
+  height: 8px;
+  background: var(--card-alt);
+  border-radius: 4px;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+}
+.progress-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .4s ease;
+}
+.progress-bar-fill.hard { background: var(--red); }
+.progress-bar-fill.soft { background: var(--orange); }
+.progress-bar-fill.green { background: var(--green); }
+.progress-bar-fill.blue { background: var(--blue); }
+
+/* ---------- Expand / collapse button ---------- */
+.expand-btn {
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  margin-top: 6px;
+  width: 100%;
+  text-align: center;
+  transition: background .15s, color .15s;
+}
+.expand-btn:hover { background: var(--card-alt); color: var(--text); }
+
+/* ---------- EC pill ---------- */
+.ec-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 2px 3px;
+  background: rgba(0,114,178,.15);
+  color: var(--blue);
+}
+
+/* ---------- Odor pill ---------- */
+.odor-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin: 2px 3px;
+  background: rgba(230,159,0,.15);
+  color: var(--orange);
+}
+.odor-pill.unique { font-weight: 700; border: 1px solid var(--orange); }
+
+/* ---------- Order comparison panel ---------- */
+.order-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.order-panel {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+}
+.order-panel-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+/* ---------- Counterfactual before/after ---------- */
+.cf-before-after {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.92rem;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.cf-stat {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+.cf-arrow { color: var(--muted); font-size: 1.2rem; }
+
+/* ---------- Showcase expanded: colored left border ---------- */
+.showcase-card.expanded { border-left: 4px solid var(--orange); }
+.showcase-card.expanded:nth-child(1) { border-left-color: var(--red); }
+.showcase-card.expanded:nth-child(2) { border-left-color: var(--purple); }
+.showcase-card.expanded:nth-child(3) { border-left-color: var(--blue); }
+.showcase-card.expanded:nth-child(4) { border-left-color: var(--green); }
+.showcase-card.expanded:nth-child(5) { border-left-color: var(--orange); }
+.showcase-card.expanded:nth-child(6) { border-left-color: var(--purple); }
+
+/* ---------- Typewriter animation ---------- */
+@keyframes typewriter-blink {
+  0%, 100% { border-right-color: var(--orange); }
+  50% { border-right-color: transparent; }
+}
+.fol-typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid var(--orange);
+  animation: typewriter-blink .7s step-end infinite;
+  width: 0;
+}
+.fol-typewriter.done {
+  width: 100%;
+  white-space: normal;
+  border-right: none;
+  animation: none;
+}
+
+/* ---------- Network graph ---------- */
+#networkContainer {
+  width: 100%;
+  height: 500px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  position: relative;
+  overflow: hidden;
+}
+#networkContainer svg { width: 100%; height: 100%; }
+#networkTooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(15,23,42,.92);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.82rem;
+  color: var(--text);
+  display: none;
+  z-index: 10;
+  white-space: nowrap;
+}
+#networkReset {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--card-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  padding: 5px 12px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: none;
+  z-index: 5;
+}
+#networkReset:hover { color: var(--text); border-color: var(--orange); }
+
+/* ---------- Dashboard grid ---------- */
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.dash-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  min-height: 300px;
+}
+.dash-card h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 14px;
+}
+.dash-card svg { width: 100%; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .showcase-grid { grid-template-columns: 1fr; }
+  .query-controls { flex-direction: column; }
+  .query-controls .field { min-width: 100%; }
+  .stats-bar { gap: 14px; padding: 8px 16px; font-size: 0.8rem; }
+  .order-compare { grid-template-columns: 1fr; }
+  .dash-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- Stats bar -->
+<div class="stats-bar" id="statsBar">
+  <div class="stat"><strong id="statRules">-</strong> rules</div>
+  <div class="stat"><strong id="statPathways">-</strong> pathways</div>
+  <div class="stat"><strong id="statOdors">-</strong> odor categories</div>
+  <div class="stat"><strong id="statEvents">-</strong> transformation events</div>
+  <div class="stat"><strong id="statPairs">-</strong> (source,target) pairs</div>
+  <div class="stat" style="color:var(--muted);font-size:0.78rem" id="statDescNote"></div>
+</div>
+
+<div class="container">
+
+  <!-- ================================================================
+       TIER 1: Showcase
+       ================================================================ -->
+  <section id="tier1">
+    <div class="section-header">
+      <h2>Six Discoveries About Odor Change</h2>
+      <p>Each card reveals a structural insight mined from enzymatic pathway data. Click to explore the evidence.</p>
+    </div>
+    <div class="showcase-grid" id="showcaseGrid">
+      <!-- Populated by JS -->
+    </div>
+  </section>
+
+  <!-- ================================================================
+       VIZ A: Odor Transformation Network
+       ================================================================ -->
+  <section id="vizNetwork">
+    <div class="section-header">
+      <h2>Odor Transformation Network</h2>
+      <p>Interactive metabolic odor network. Nodes = compounds, edges = enzymatic transformations colored by EC class. Drag, zoom, and click to explore.</p>
+    </div>
+    <div style="background:#222;border-radius:12px;overflow:hidden;border:1px solid #334155">
+      <iframe src="network.html" style="width:100%;height:650px;border:none;display:block"></iframe>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       VIZ B: Statistical Dashboard
+       ================================================================ -->
+  <section id="vizDashboard">
+    <div class="section-header">
+      <h2>Empirical Landscape at a Glance</h2>
+      <p>Key distributions from the full dataset of enzymatic odor transformations.</p>
+    </div>
+    <div class="dash-grid">
+      <div class="dash-card">
+        <h3>EC Class Distribution</h3>
+        <div id="chartEcClass"></div>
+      </div>
+      <div class="dash-card">
+        <h3>Source vs Target Asymmetry</h3>
+        <div id="chartAsymmetry"></div>
+      </div>
+      <div class="dash-card">
+        <h3>Pathway Length Distribution</h3>
+        <div id="chartLengths"></div>
+      </div>
+      <div class="dash-card">
+        <h3>Rule Type Distribution</h3>
+        <div id="chartRuleTypes"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       TIER 2: Guided Query
+       ================================================================ -->
+  <section id="tier2">
+    <div class="section-header">
+      <h2>Explore the Rule Space</h2>
+      <p>Choose a direct query type, fill in the parameters, and run it against the rule engine.</p>
+    </div>
+    <div class="query-panel">
+      <div class="query-controls">
+        <div class="field" style="max-width:200px">
+          <label>Query Type</label>
+          <select id="directQueryType">
+            <option value="">-- select --</option>
+            <option value="can_transform">can_transform</option>
+            <option value="must_via">must_via</option>
+            <option value="forbidden">forbidden</option>
+            <option value="compatible">compatible</option>
+            <option value="what_produces">what_produces</option>
+            <option value="order_matters">order_matters</option>
+          </select>
+        </div>
+        <div id="directParams"></div>
+        <button class="btn" id="directQueryBtn" disabled>Query</button>
+      </div>
+      <div class="loading-overlay" id="directLoading"><span class="spinner"></span> Running query...</div>
+      <div class="error-msg hidden" id="directError"></div>
+      <div class="result-box hidden" id="directResult"></div>
+    </div>
+  </section>
+
+  <!-- ================================================================
+       TIER 3: Reasoning
+       ================================================================ -->
+  <section id="tier3">
+    <div class="section-header">
+      <h2>Multi-Step Reasoning</h2>
+      <p>Advanced queries that chain rules together for deeper inference.</p>
+    </div>
+    <div class="query-panel">
+      <div class="query-controls">
+        <div class="field" style="max-width:220px">
+          <label>Reasoning Query</label>
+          <select id="reasonQueryType">
+            <option value="">-- select --</option>
+            <option value="multi_step">multi_step</option>
+            <option value="counterfactual">counterfactual</option>
+            <option value="order_sensitivity">order_sensitivity</option>
+          </select>
+        </div>
+        <div id="reasonParams"></div>
+        <button class="btn" id="reasonQueryBtn" disabled>Query</button>
+      </div>
+      <div class="loading-overlay" id="reasonLoading"><span class="spinner"></span> Running query...</div>
+      <div class="error-msg hidden" id="reasonError"></div>
+      <div class="result-box hidden" id="reasonResult"></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* =================================================================
+   JavaScript: Static version - all data loaded from JSON files
+   ================================================================= */
+
+/* ----------------------------------------------------------------
+   Global data stores (loaded once at startup)
+   ---------------------------------------------------------------- */
+let RULES = {};          // rules.json: {type: [rule, ...]}
+let EVENTS_INDEX = {};   // events_index.json: {"source|target": {"ec_seq_str": {c, w}}}
+let ODORS = [];          // odors.json: list of odor strings
+let STATS = {};          // stats.json
+let VIZ_DATA = {};       // viz.json
+let SHOWCASE = [];       // showcase.json
+
+let DATA_READY = false;
+
+/* Extract unique ECs from events_index */
+let ALL_ECS = [];
+
+async function loadAllData() {
+  try {
+    const [rules, eventsIndex, odors, stats, viz, showcase] = await Promise.all([
+      fetch('data/rules.json').then(r => r.json()),
+      fetch('data/events_index.json').then(r => r.json()),
+      fetch('data/odors.json').then(r => r.json()),
+      fetch('data/stats.json').then(r => r.json()),
+      fetch('data/viz.json').then(r => r.json()),
+      fetch('data/showcase.json').then(r => r.json()),
+    ]);
+    RULES = rules;
+    EVENTS_INDEX = eventsIndex;
+    ODORS = odors;
+    STATS = stats;
+    VIZ_DATA = viz;
+    SHOWCASE = showcase;
+
+    // Extract unique ECs
+    const ecSet = new Set();
+    for (const key of Object.keys(EVENTS_INDEX)) {
+      for (const seqStr of Object.keys(EVENTS_INDEX[key])) {
+        for (const ec of seqStr.split(',')) {
+          ecSet.add(ec.trim());
+        }
+      }
+    }
+    ALL_ECS = [...ecSet].sort();
+
+    DATA_READY = true;
+    onDataReady();
+  } catch(e) {
+    console.error('Failed to load data:', e);
+    document.getElementById('showcaseGrid').innerHTML =
+      '<div class="error-msg">Failed to load data files. Make sure this page is served from a web server (not file://).</div>';
+  }
+}
+
+function onDataReady() {
+  loadStats();
+  renderShowcase();
+  renderDashboard();
+  setTimeout(loadDefaultQueries, 500);
+}
+
+/* ----------------------------------------------------------------
+   Client-side Query Engine
+   ---------------------------------------------------------------- */
+
+function queryCanTransform(source, target) {
+  const key = source + '|' + target;
+  const entries = EVENTS_INDEX[key];
+  if (!entries || Object.keys(entries).length === 0) {
+    return { possible: false, ec_sequences: [], clean_count: 0, partial_count: 0, exclusions: [] };
+  }
+
+  const seqs = [];
+  for (const [seqStr, info] of Object.entries(entries)) {
+    const seq = seqStr.split(',');
+    const hasUnknown = seq.some(e => e.includes('unknown') || e === '-');
+    seqs.push({
+      seq: seq,
+      weight: info.w,
+      pathway_count: info.c,
+      has_unknown: hasUnknown
+    });
+  }
+  seqs.sort((a, b) => b.weight - a.weight);
+
+  const cleanCount = seqs.filter(s => !s.has_unknown).length;
+  const partialCount = seqs.filter(s => s.has_unknown).length;
+
+  // Check exclusion rules for this source
+  const exclusions = [];
+  if (RULES.exclusion) {
+    for (const rule of RULES.exclusion) {
+      if (rule.body.source === source) {
+        exclusions.push({
+          ec_sequence: rule.body.ec_sequence,
+          excluded_target: rule.head.excluded_target,
+          confidence: rule.confidence
+        });
+      }
+    }
+  }
+
+  return {
+    possible: true,
+    ec_sequences: seqs,
+    clean_count: cleanCount,
+    partial_count: partialCount,
+    exclusions: exclusions.slice(0, 20)
+  };
+}
+
+function queryMustVia(source, target) {
+  const hardNecessary = [];
+  const softNecessary = [];
+
+  // Search necessary rules
+  if (RULES.necessary) {
+    for (const rule of RULES.necessary) {
+      if (rule.body.source === source && rule.body.target === target) {
+        hardNecessary.push({
+          ec: rule.head.ec,
+          confidence: rule.confidence,
+          support: rule.support,
+          path_count: rule.coverage ? Math.round(rule.coverage * 100) : 0,
+          pathway_ids: []
+        });
+      }
+    }
+  }
+
+  // Search conditional_necessary rules
+  if (RULES.conditional_necessary) {
+    for (const rule of RULES.conditional_necessary) {
+      if (rule.body.source === source && rule.body.target === target) {
+        softNecessary.push({
+          ec: rule.head.necessary_ec,
+          confidence: rule.confidence,
+          support: rule.support
+        });
+      }
+    }
+  }
+
+  // Also search required_ec rules
+  if (RULES.required_ec) {
+    for (const rule of RULES.required_ec) {
+      if (rule.body.source === source && rule.body.target === target) {
+        const ec = rule.head.necessary_ec;
+        // Avoid duplicates
+        if (!hardNecessary.some(h => h.ec === ec) && !softNecessary.some(s => s.ec === ec)) {
+          softNecessary.push({
+            ec: ec,
+            confidence: rule.confidence,
+            support: rule.support
+          });
+        }
+      }
+    }
+  }
+
+  return { hard_necessary: hardNecessary, soft_necessary: softNecessary };
+}
+
+function queryForbidden(source, ecSequence, target) {
+  if (RULES.exclusion) {
+    for (const rule of RULES.exclusion) {
+      if (rule.body.source === source &&
+          rule.head.excluded_target === target &&
+          JSON.stringify(rule.body.ec_sequence) === JSON.stringify(ecSequence)) {
+        // Compute global and local ratios from events_index
+        let globalCount = 0, globalTotal = 0;
+        let localCount = 0, localTotal = 0;
+        for (const [pairKey, entries] of Object.entries(EVENTS_INDEX)) {
+          const [s, t] = pairKey.split('|');
+          for (const info of Object.values(entries)) {
+            globalTotal += info.c;
+            if (t === target) globalCount += info.c;
+          }
+          if (s === source) {
+            const seqStr = ecSequence.join(',');
+            if (entries[seqStr]) {
+              localTotal += entries[seqStr].c;
+              if (t === target) localCount += entries[seqStr].c;
+            }
+          }
+        }
+        const globalRatio = globalTotal > 0 ? globalCount / globalTotal : 0;
+        const localRatio = localTotal > 0 ? localCount / localTotal : 0;
+
+        return {
+          forbidden: true,
+          rule: rule,
+          global_ratio: globalRatio,
+          local_ratio: localRatio,
+          evidence: `'${target}' appears in ${(globalRatio*100).toFixed(1)}% of all events globally but ${(localRatio*100).toFixed(1)}% under source='${source}' with EC seq [${ecSequence.join(', ')}]`
+        };
+      }
+    }
+  }
+  return {
+    forbidden: false,
+    rule: null,
+    evidence: 'No exclusion rule found for this combination'
+  };
+}
+
+function queryCompatible(ec1, ec2) {
+  if (RULES.mutual_exclusion) {
+    for (const rule of RULES.mutual_exclusion) {
+      if ((rule.body.ec1 === ec1 && rule.body.ec2 === ec2) ||
+          (rule.body.ec1 === ec2 && rule.body.ec2 === ec1)) {
+        // Estimate co-occurrence from events_index
+        let countEc1 = 0, countEc2 = 0, countBoth = 0, totalPaths = 0;
+        for (const entries of Object.values(EVENTS_INDEX)) {
+          for (const [seqStr, info] of Object.entries(entries)) {
+            const ecs = seqStr.split(',');
+            totalPaths += info.c;
+            const hasEc1 = ecs.includes(ec1);
+            const hasEc2 = ecs.includes(ec2);
+            if (hasEc1) countEc1 += info.c;
+            if (hasEc2) countEc2 += info.c;
+            if (hasEc1 && hasEc2) countBoth += info.c;
+          }
+        }
+        const expected = totalPaths > 0 ? (countEc1 / totalPaths) * (countEc2 / totalPaths) * totalPaths : 0;
+        const ratio = expected > 0 ? countBoth / expected : 0;
+
+        return {
+          compatible: false,
+          rule: rule,
+          expected_cooccurrence: Math.round(expected * 100) / 100,
+          actual_cooccurrence: countBoth,
+          ratio: Math.round(ratio * 10000) / 10000
+        };
+      }
+    }
+  }
+  return {
+    compatible: true,
+    rule: null,
+    expected_cooccurrence: null,
+    actual_cooccurrence: null,
+    ratio: null
+  };
+}
+
+function queryWhatProduces(target) {
+  const sufficientSets = [];
+  const disjunctiveSources = [];
+
+  if (RULES.sufficient) {
+    for (const rule of RULES.sufficient) {
+      if (rule.head.target === target) {
+        sufficientSets.push({
+          ec_set: rule.body.ec_set,
+          ec_sequence: rule.body.ec_sequence,
+          confidence: rule.confidence,
+          support: rule.support,
+          has_unknown: false
+        });
+      }
+    }
+  }
+
+  if (RULES.disjunctive_source) {
+    for (const rule of RULES.disjunctive_source) {
+      if (rule.head.target === target) {
+        disjunctiveSources.push({
+          sources: rule.body.sources,
+          ec_sequence: rule.body.ec_sequence,
+          confidence: rule.confidence,
+          support: rule.support
+        });
+      }
+    }
+  }
+
+  // Count necessary ECs for this target
+  let necessaryCount = 0;
+  if (RULES.necessary) {
+    for (const rule of RULES.necessary) {
+      if (rule.body.target === target) necessaryCount++;
+    }
+  }
+
+  return {
+    sufficient_sets: sufficientSets,
+    disjunctive_sources: disjunctiveSources,
+    full_result_summary: {
+      sufficient_sets_count: sufficientSets.length,
+      disjunctive_sources_count: disjunctiveSources.length,
+      necessary_ecs_count: necessaryCount
+    }
+  };
+}
+
+function queryOrderMatters(ec1, ec2) {
+  const fwdKey = ec1 + ',' + ec2;
+  const revKey = ec2 + ',' + ec1;
+  const fwdTargets = new Set();
+  const revTargets = new Set();
+  let fwdCount = 0, revCount = 0;
+
+  for (const [pairKey, entries] of Object.entries(EVENTS_INDEX)) {
+    const target = pairKey.split('|')[1];
+    for (const seqStr of Object.keys(entries)) {
+      const ecs = seqStr.split(',');
+      // Check if the forward pair appears consecutively
+      for (let i = 0; i < ecs.length - 1; i++) {
+        if (ecs[i] === ec1 && ecs[i+1] === ec2) {
+          fwdTargets.add(target);
+          fwdCount += entries[seqStr].c;
+        }
+        if (ecs[i] === ec2 && ecs[i+1] === ec1) {
+          revTargets.add(target);
+          revCount += entries[seqStr].c;
+        }
+      }
+    }
+  }
+
+  // Also check for exact 2-element sequences
+  for (const [pairKey, entries] of Object.entries(EVENTS_INDEX)) {
+    const target = pairKey.split('|')[1];
+    if (entries[fwdKey]) fwdTargets.add(target);
+    if (entries[revKey]) revTargets.add(target);
+  }
+
+  const fwdArr = [...fwdTargets].sort();
+  const revArr = [...revTargets].sort();
+  const matters = JSON.stringify(fwdArr) !== JSON.stringify(revArr) && (fwdArr.length > 0 || revArr.length > 0);
+
+  // Find required_order rules
+  const requiredOrders = [];
+  if (RULES.required_order) {
+    for (const rule of RULES.required_order) {
+      if ((rule.head.ec1 === ec1 && rule.head.ec2 === ec2) ||
+          (rule.head.ec1 === ec2 && rule.head.ec2 === ec1)) {
+        requiredOrders.push(rule);
+      }
+    }
+  }
+
+  return {
+    matters: matters,
+    forward_targets: fwdArr,
+    reverse_targets: revArr,
+    forward_transition_count: fwdCount,
+    reverse_transition_count: revCount,
+    required_orders: requiredOrders.slice(0, 10)
+  };
+}
+
+function queryCounterfactual(source, target, removeEc) {
+  const key = source + '|' + target;
+  const entries = EVENTS_INDEX[key];
+  if (!entries || Object.keys(entries).length === 0) {
+    return {
+      still_reachable: false,
+      original_paths: 0,
+      blocked_paths: 0,
+      surviving_count: 0,
+      surviving_paths: [],
+      reduction_pct: 0,
+      alternative_ecs: []
+    };
+  }
+
+  let originalPaths = 0;
+  const survivingPaths = [];
+  const blockedPaths = [];
+  const altEcSet = new Set();
+
+  for (const [seqStr, info] of Object.entries(entries)) {
+    const seq = seqStr.split(',');
+    originalPaths += info.c;
+    if (seq.includes(removeEc)) {
+      blockedPaths.push({ ec_sequence: seq, pathway_count: info.c, weight: info.w });
+    } else {
+      survivingPaths.push({
+        pathway_id: `${source}>${target}`,
+        ec_sequence: seq,
+        weight: info.w,
+        pathway_count: info.c
+      });
+      seq.forEach(ec => altEcSet.add(ec));
+    }
+  }
+
+  const blockedCount = blockedPaths.reduce((s, p) => s + p.pathway_count, 0);
+  const survCount = survivingPaths.reduce((s, p) => s + (p.pathway_count || 1), 0);
+  const redPct = originalPaths > 0 ? Math.round(blockedCount / originalPaths * 100) : 0;
+
+  return {
+    still_reachable: survivingPaths.length > 0,
+    original_paths: originalPaths,
+    blocked_paths: blockedCount,
+    surviving_count: survCount,
+    surviving_paths: survivingPaths,
+    reduction_pct: redPct,
+    alternative_ecs: [...altEcSet].sort()
+  };
+}
+
+function queryMultiStep(source, target, maxSteps) {
+  maxSteps = maxSteps || 2;
+  const paths = [];
+
+  // Build lookup: for each source odor, what targets are reachable and with what EC seqs
+  const sourceToTargets = {};
+  for (const pairKey of Object.keys(EVENTS_INDEX)) {
+    const [s, t] = pairKey.split('|');
+    if (!sourceToTargets[s]) sourceToTargets[s] = {};
+    const bestSeq = Object.entries(EVENTS_INDEX[pairKey])
+      .sort((a, b) => b[1].w - a[1].w)[0];
+    if (bestSeq) {
+      sourceToTargets[s][t] = bestSeq[0].split(',');
+    }
+  }
+
+  // BFS for paths from source to target up to maxSteps
+  // Each state: [currentOdor, path_so_far, ec_sequences_so_far]
+  const queue = [[source, [], []]];
+  const visited = new Set([source]);
+
+  for (let step = 0; step < maxSteps && paths.length < 50; step++) {
+    const nextQueue = [];
+    for (const [current, intermediates, ecSeqs] of queue) {
+      const targets = sourceToTargets[current];
+      if (!targets) continue;
+      for (const [nextOdor, ecSeq] of Object.entries(targets)) {
+        if (nextOdor === target) {
+          paths.push({
+            total_steps: intermediates.length + 1,
+            intermediates: [...intermediates, current === source ? undefined : current].filter(Boolean),
+            ec_sequences: [...ecSeqs, ecSeq]
+          });
+        } else if (!visited.has(nextOdor) && step < maxSteps - 1) {
+          nextQueue.push([nextOdor, [...intermediates, current === source ? undefined : current].filter(Boolean), [...ecSeqs, ecSeq]]);
+        }
+      }
+    }
+    // Mark visited for this level to avoid infinite loops
+    for (const [current] of nextQueue) {
+      visited.add(current);
+    }
+    queue.length = 0;
+    queue.push(...nextQueue);
+  }
+
+  // Check compatibility
+  const compatibilityChecks = [];
+  if (RULES.mutual_exclusion) {
+    for (const path of paths.slice(0, 10)) {
+      const allEcs = path.ec_sequences.flat();
+      for (const rule of RULES.mutual_exclusion) {
+        if (allEcs.includes(rule.body.ec1) && allEcs.includes(rule.body.ec2)) {
+          compatibilityChecks.push({
+            ec1: rule.body.ec1,
+            ec2: rule.body.ec2,
+            path: path.intermediates
+          });
+        }
+      }
+    }
+  }
+
+  return {
+    reachable: paths.length > 0,
+    paths: paths.slice(0, 20),
+    compatibility_checks: compatibilityChecks
+  };
+}
+
+/* Dispatch query by type */
+function runQuery(queryType, params) {
+  switch (queryType) {
+    case 'can_transform':
+      return queryCanTransform(params.source, params.target);
+    case 'must_via':
+      return queryMustVia(params.source, params.target);
+    case 'forbidden': {
+      const ecSeq = (params.ec_sequence || '').split(',').map(s => s.trim()).filter(Boolean);
+      return queryForbidden(params.source, ecSeq, params.target);
+    }
+    case 'compatible':
+      return queryCompatible(params.ec1, params.ec2);
+    case 'what_produces':
+      return queryWhatProduces(params.target);
+    case 'order_matters':
+      return queryOrderMatters(params.ec1, params.ec2);
+    case 'multi_step':
+      return queryMultiStep(params.source, params.target, parseInt(params.max_steps) || 2);
+    case 'counterfactual':
+      return queryCounterfactual(params.source, params.target, params.remove_ec);
+    case 'order_sensitivity':
+      return queryOrderMatters(params.ec1, params.ec2);
+    default:
+      return { error: 'Unknown query type: ' + queryType };
+  }
+}
+
+
+/* ================================================================
+   Showcase + Rendering (same as Flask version)
+   ================================================================ */
+
+const SHOWCASE_META = [
+  { icon: '&#x1F6AB;', label: 'Hard Barriers' },
+  { icon: '&#x26A1;',  label: 'Incompatibility' },
+  { icon: '&#x1F6AA;', label: 'Directional Gates' },
+  { icon: '&#x1F300;', label: 'Sequence Dominance' },
+  { icon: '&#x1F9EC;', label: 'Enzyme Sufficiency' },
+  { icon: '&#x1F504;', label: 'Order Sensitivity' },
+];
+
+/* Param schema per query type */
+const DIRECT_PARAMS = {
+  can_transform:  [{ key:'source', type:'select' }, { key:'target', type:'select' }],
+  must_via:       [{ key:'source', type:'select' }, { key:'target', type:'select' }],
+  forbidden:      [{ key:'source', type:'select' }, { key:'ec_sequence', type:'text', placeholder:'e.g. 4.2.3,4.2.3' }, { key:'target', type:'select' }],
+  compatible:     [{ key:'ec1', type:'select' }, { key:'ec2', type:'select' }],
+  what_produces:  [{ key:'target', type:'select' }],
+  order_matters:  [{ key:'ec1', type:'select' }, { key:'ec2', type:'select' }],
+};
+
+const REASON_PARAMS = {
+  multi_step:         [{ key:'source', type:'select' }, { key:'target', type:'select' }, { key:'max_steps', type:'number', default:2 }],
+  counterfactual:     [{ key:'source', type:'select' }, { key:'target', type:'select' }, { key:'remove_ec', type:'select' }],
+  order_sensitivity:  [{ key:'ec1', type:'select' }, { key:'ec2', type:'select' }],
+};
+
+
+/* ----------------------------------------------------------------
+   Helpers
+   ---------------------------------------------------------------- */
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = String(s ?? '');
+  return d.innerHTML;
+}
+
+/** Syntax-highlight a FOL string */
+function highlightFOL(s) {
+  if (!s) return '';
+  let h = esc(s);
+  h = h.replace(/\b(citrus|floral|cheesy|camphoreous|burnt|meaty|dairy|fruity|green|herbal|malty|minty|musty|nutty|pungent|roasted|smoky|spicy|sulfurous|sweet|woody|waxy|earthy|fatty|winey|chemical|ethereal|alcoholic|balsamic|buttery|caramellic|chocolate|coconut|coffee|honey|metallic|oily|popcorn|savory|tropical|vanilla|vegetable|vinegar|aldehydic|alliaceous|anisic|berry|bread|dry|fermented|fresh|mushroom|phenolic|sour|warm|cooling|clean|cocoa|amber|animal|apple|aromatic|banana|beefy|bergamot|brandy|cabbage|cedar|celery|cherry|cinnamon|clove|cognac|cooked|cortex|coumarinic|creamy|cucumber|fishy|fruit skin|gassy|geranium|grape|grassy|hawthorn|hay|jasmin|ketonic|leathery|lily|medicinal|milky|mint|oily|pear|potato|powdery|ripe|rose|sharp|soapy|warm|winey)\b/gi, '<span class="odor">$1</span>');
+  h = h.replace(/\b(\d+\.\d+\.\d+(?:\.\d+)?)\b/g, '<span class="ec">$1</span>');
+  h = h.replace(/([∧∨→¬⊥])/g, '<span class="op">$1</span>');
+  return h;
+}
+
+/** Build a collapsible evidence section */
+function collapsibleHTML(title, content, startOpen) {
+  return `
+    <div class="evidence-section">
+      <button class="evidence-toggle${startOpen ? ' open' : ''}" onclick="toggleEvidence(this)">
+        <span class="arrow">&#9654;</span> ${esc(title)}
+      </button>
+      <div class="evidence-body${startOpen ? ' open' : ''}">
+        <div class="evidence-body-inner">${content}</div>
+      </div>
+    </div>`;
+}
+
+function toggleEvidence(btn) {
+  event.stopPropagation();
+  btn.classList.toggle('open');
+  const body = btn.nextElementSibling;
+  body.classList.toggle('open');
+}
+
+function toggleRuleItem(el) {
+  event.stopPropagation();
+  el.classList.toggle('open');
+}
+
+function truncatedList(items, limit, renderFn) {
+  if (!items || !items.length) return '';
+  const id = 'tl_' + Math.random().toString(36).slice(2,9);
+  let html = '';
+  items.forEach((item, i) => {
+    const hidden = i >= limit ? ` style="display:none" data-trunc="${id}"` : '';
+    html += `<div${hidden}>${renderFn(item, i)}</div>`;
+  });
+  if (items.length > limit) {
+    html += `<button class="expand-btn" id="btn_${id}" onclick="toggleTruncated('${id}', ${items.length})">Show all ${items.length} results</button>`;
+  }
+  return html;
+}
+
+function toggleTruncated(id, total) {
+  event.stopPropagation();
+  const els = document.querySelectorAll(`[data-trunc="${id}"]`);
+  const btn = document.getElementById('btn_' + id);
+  const anyHidden = [...els].some(e => e.style.display === 'none');
+  els.forEach(e => e.style.display = anyHidden ? '' : 'none');
+  btn.textContent = anyHidden ? 'Show fewer' : `Show all ${total} results`;
+}
+
+function showLoading(id) { document.getElementById(id).classList.add('visible'); }
+function hideLoading(id) { document.getElementById(id).classList.remove('visible'); }
+function showError(id, msg) { const e = document.getElementById(id); e.textContent = msg; e.classList.remove('hidden'); }
+function hideError(id) { document.getElementById(id).classList.add('hidden'); }
+
+
+/* ----------------------------------------------------------------
+   Stats bar
+   ---------------------------------------------------------------- */
+
+function loadStats() {
+  const s = STATS;
+  document.getElementById('statRules').textContent = s.rules?.toLocaleString() ?? '-';
+  document.getElementById('statPathways').textContent = s.pathways?.toLocaleString() ?? '-';
+  document.getElementById('statOdors').textContent = s.odors?.toLocaleString() ?? '-';
+  document.getElementById('statEvents').textContent = s.events?.toLocaleString() ?? '-';
+  document.getElementById('statPairs').textContent = s.pairs?.toLocaleString() ?? '-';
+}
+
+/* ----------------------------------------------------------------
+   Tier 1: Showcase
+   ---------------------------------------------------------------- */
+
+function renderShowcase() {
+  const grid = document.getElementById('showcaseGrid');
+  grid.innerHTML = '';
+  SHOWCASE.forEach((ex, i) => {
+    const meta = SHOWCASE_META[i] || { icon:'&#x2728;', label: ex.title };
+    const card = document.createElement('div');
+    card.className = 'showcase-card';
+    card.setAttribute('data-index', i);
+
+    card.innerHTML = `
+      <span class="card-icon">${meta.icon}</span>
+      <div class="card-title">${esc(meta.label)}</div>
+      <div class="card-desc">${esc(ex.description)}</div>
+      <div class="showcase-detail">
+        ${renderShowcaseDetail(ex)}
+      </div>`;
+
+    card.addEventListener('click', (e) => {
+      const detail = card.querySelector('.showcase-detail');
+      if (card.classList.contains('expanded') && detail && detail.contains(e.target)) {
+        return;
+      }
+      const wasExpanded = card.classList.contains('expanded');
+      grid.querySelectorAll('.showcase-card').forEach(c => c.classList.remove('expanded'));
+      if (!wasExpanded) card.classList.add('expanded');
+    });
+
+    grid.appendChild(card);
+  });
+}
+
+function renderShowcaseDetail(ex) {
+  let html = '';
+
+  const folId = 'fol_' + Math.random().toString(36).slice(2,9);
+  html += `<div class="fol-box"><span class="fol-typewriter" id="${folId}">${highlightFOL(ex.fol)}</span></div>`;
+  setTimeout(() => {
+    const el = document.getElementById(folId);
+    if (el) {
+      el.style.transition = 'width 1.2s steps(40, end)';
+      el.style.width = '100%';
+      setTimeout(() => { if (el) el.classList.add('done'); }, 1300);
+    }
+  }, 100);
+
+  html += collapsibleHTML('Answer', renderResultContent(ex.result, guessShowcaseType(ex)), true);
+  html += collapsibleHTML('Query Invoked',
+    `<div class="fol-box" style="font-size:0.82rem">${esc(ex.query)}</div>`, false);
+  html += collapsibleHTML('Raw Evidence (JSON)',
+    `<pre style="font-size:0.78rem;color:var(--muted);white-space:pre-wrap;max-height:400px;overflow:auto">${esc(JSON.stringify(ex.result, null, 2))}</pre>`, false);
+
+  return html;
+}
+
+function guessShowcaseType(ex) {
+  const t = ex.title.toLowerCase();
+  if (t.includes('barrier')) return 'forbidden';
+  if (t.includes('incompatib')) return 'compatible';
+  if (t.includes('directional') || t.includes('gate')) return 'must_via';
+  if (t.includes('dominance')) return 'what_produces';
+  if (t.includes('sufficiency')) return 'what_produces';
+  if (t.includes('order')) return 'order_sensitivity';
+  return 'generic';
+}
+
+/* ----------------------------------------------------------------
+   Result rendering (reusable)
+   ---------------------------------------------------------------- */
+
+function renderResultContent(result, queryType) {
+  if (!result) return '<span style="color:var(--muted)">No result</span>';
+
+  let html = '';
+
+  const badge = determineBadge(result, queryType);
+  if (badge) {
+    html += `<div class="result-header">${badge.html} <span style="color:var(--muted);font-weight:400;font-size:0.88rem">${esc(badge.text)}</span></div>`;
+  }
+
+  html += renderResultBody(result, queryType);
+
+  return html;
+}
+
+function determineBadge(r, qt) {
+  if (qt === 'can_transform') {
+    return r.possible
+      ? { html: '<span class="badge badge-yes">YES</span>', text: 'Transformation is possible' }
+      : { html: '<span class="badge badge-no">NO</span>', text: 'No known transformation path' };
+  }
+  if (qt === 'forbidden') {
+    return r.forbidden
+      ? { html: '<span class="badge badge-no">FORBIDDEN</span>', text: r.evidence || 'Target is excluded' }
+      : { html: '<span class="badge badge-yes">ALLOWED</span>', text: r.evidence || 'No exclusion rule found' };
+  }
+  if (qt === 'compatible') {
+    return r.compatible
+      ? { html: '<span class="badge badge-yes">COMPATIBLE</span>', text: 'These enzymes can co-occur' }
+      : { html: '<span class="badge badge-no">INCOMPATIBLE</span>', text: 'Mutual exclusion rule found' };
+  }
+  if (qt === 'must_via') {
+    const count = (r.hard_necessary?.length || 0) + (r.soft_necessary?.length || 0);
+    return count > 0
+      ? { html: '<span class="badge badge-list">FOUND</span>', text: `${count} necessary enzyme(s) identified` }
+      : { html: '<span class="badge badge-no">NONE</span>', text: 'No necessary enzymes found' };
+  }
+  if (qt === 'what_produces') {
+    const count = (r.sufficient_sets?.length || 0) + (r.disjunctive_sources?.length || 0);
+    return { html: '<span class="badge badge-list">FOUND</span>', text: `${count} production rule(s)` };
+  }
+  if (qt === 'order_matters' || qt === 'order_sensitivity') {
+    return r.matters
+      ? { html: '<span class="badge badge-yes">YES</span>', text: 'Order produces different outcomes' }
+      : { html: '<span class="badge badge-no">NO</span>', text: 'Order does not affect outcome' };
+  }
+  if (qt === 'multi_step') {
+    return r.reachable
+      ? { html: '<span class="badge badge-yes">REACHABLE</span>', text: `${r.paths?.length || 0} path(s) found` }
+      : { html: '<span class="badge badge-no">UNREACHABLE</span>', text: 'No multi-step path found' };
+  }
+  if (qt === 'counterfactual') {
+    return r.still_reachable
+      ? { html: '<span class="badge badge-yes">STILL REACHABLE</span>', text: `${r.surviving_paths?.length || 0} surviving, ${r.blocked_paths || 0} blocked` }
+      : { html: '<span class="badge badge-no">BLOCKED</span>', text: `All ${r.original_paths || 0} paths require this enzyme` };
+  }
+  return null;
+}
+
+function renderResultBody(r, qt) {
+  let html = '';
+
+  if (qt === 'can_transform' && r.ec_sequences?.length) {
+    const maxW = Math.max(...r.ec_sequences.map(s => s.weight || 0), 0.001);
+    html += '<div class="result-section"><div class="result-section-title">EC Sequences';
+    if (r.partial_count > 0) html += ` <span style="font-size:0.75rem;font-weight:400;color:var(--muted)">(${r.clean_count || 0} clean, ${r.partial_count} partial)</span>`;
+    html += '</div>';
+    html += truncatedList(r.ec_sequences, 10, (s, i) => {
+      const barPct = Math.max(4, Math.round((s.weight / maxW) * 100));
+      const barClass = s.has_unknown ? 'partial' : 'clean';
+      const unknownTag = s.has_unknown ? '<span class="unknown-pill">partial</span>' : '';
+      return `<div class="rule-item" onclick="toggleRuleItem(this)">
+        <div class="rule-head"><span>${highlightFOL(s.seq?.join(' \u2192 '))}${unknownTag}</span><span style="color:var(--muted);font-size:0.8rem">weight ${s.weight} &middot; ${s.pathway_count} pathways</span></div>
+        <div class="weight-bar-container"><div class="weight-bar ${barClass}" style="width:${barPct}%"></div><span style="font-size:0.72rem;color:var(--muted)">${s.weight}</span></div>
+      </div>`;
+    });
+    html += '</div>';
+    if (r.exclusions?.length) {
+      html += '<div class="result-section"><div class="result-section-title">Exclusion Rules</div>';
+      html += truncatedList(r.exclusions, 5, (e) => {
+        return `<div class="rule-item"><div class="rule-head">${highlightFOL(e.ec_sequence?.join(', '))} ${esc('\u2192 \u00ac')}${highlightFOL(e.excluded_target)}</div><div class="rule-meta">confidence: ${e.confidence}</div></div>`;
+      });
+      html += '</div>';
+    }
+  }
+
+  if (qt === 'must_via') {
+    if (r.hard_necessary?.length) {
+      html += '<div class="result-section"><div class="result-section-title">Hard Necessary</div>';
+      r.hard_necessary.forEach(n => {
+        const conf = n.confidence ?? 1.0;
+        const pct = Math.round(conf * 100);
+        html += `<div class="rule-item" onclick="toggleRuleItem(this)">
+          <div class="rule-head"><span>EC ${highlightFOL(n.ec)}</span><span class="rule-meta">${n.path_count || 0} pathways</span></div>
+          <div style="margin-top:6px;display:flex;align-items:center;gap:8px;font-size:0.82rem"><span style="color:var(--red);font-weight:600">${pct}%</span> <div class="progress-bar-track"><div class="progress-bar-fill hard" style="width:${pct}%"></div></div></div>
+          <div class="rule-detail"><div class="pathway-list">${(n.pathway_ids||[]).map(p=>`<div class="pathway-entry">${esc(p)}</div>`).join('')}</div></div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+    if (r.soft_necessary?.length) {
+      html += '<div class="result-section"><div class="result-section-title">Conditional / Soft Necessary</div>';
+      html += truncatedList(r.soft_necessary, 10, (n) => {
+        const conf = n.confidence ?? 0;
+        const pct = Math.round(conf * 100);
+        return `<div class="rule-item"><div class="rule-head"><span>EC ${highlightFOL(n.ec)}</span><span class="rule-meta">support ${n.support ?? '-'} &middot; conf ${n.confidence ?? '-'}</span></div>
+          <div style="margin-top:6px;display:flex;align-items:center;gap:8px;font-size:0.82rem"><span style="color:var(--orange);font-weight:600">${pct}%</span> <div class="progress-bar-track"><div class="progress-bar-fill soft" style="width:${pct}%"></div></div></div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+  }
+
+  if (qt === 'forbidden') {
+    if (r.rule) {
+      html += '<div class="result-section"><div class="result-section-title">Matching Rule</div>';
+      html += `<div class="fol-box">${highlightFOL(r.rule.fol_string || JSON.stringify(r.rule))}</div>`;
+      html += `<div style="color:var(--muted);font-size:0.85rem;margin-top:6px">Global ratio: ${(r.global_ratio*100).toFixed(1)}% &middot; Local ratio: ${(r.local_ratio*100).toFixed(1)}%</div>`;
+      html += '</div>';
+    }
+  }
+
+  if (qt === 'compatible') {
+    html += '<div class="result-section"><div class="result-section-title">Co-occurrence Statistics</div>';
+    html += `<div style="font-size:0.88rem">Expected: ${r.expected_cooccurrence ?? '-'} &middot; Actual: ${r.actual_cooccurrence ?? '-'} &middot; Ratio: ${r.ratio ?? '-'}</div>`;
+    if (r.rule) {
+      html += `<div style="margin-top:8px" class="fol-box">${highlightFOL(r.rule.fol_string || JSON.stringify(r.rule))}</div>`;
+    }
+    html += '</div>';
+  }
+
+  if (qt === 'what_produces') {
+    if (r.sufficient_sets?.length) {
+      html += '<div class="result-section"><div class="result-section-title">Sufficient Enzyme Sets</div>';
+      html += truncatedList(r.sufficient_sets, 10, (s) => {
+        const unknownTag = s.has_unknown ? '<span class="unknown-pill">partial</span>' : '';
+        return `<div class="rule-item"><div class="rule-head"><span>{${highlightFOL((s.ec_set||[]).join(', '))}}${unknownTag}</span><span class="rule-meta">conf ${s.confidence ?? '-'} &middot; sup ${s.support ?? '-'}</span></div></div>`;
+      });
+      html += '</div>';
+    }
+    if (r.disjunctive_sources?.length) {
+      html += '<div class="result-section"><div class="result-section-title">Disjunctive Sources</div>';
+      html += truncatedList(r.disjunctive_sources, 10, (d) => {
+        return `<div class="rule-item"><div class="rule-head"><span>(${highlightFOL((d.sources||[]).join(' | '))}) via [${highlightFOL((d.ec_sequence||[]).join(', '))}]</span><span class="rule-meta">conf ${d.confidence ?? '-'}</span></div></div>`;
+      });
+      html += '</div>';
+    }
+    /* disjunctive_sources_for_seq (showcase variant) */
+    if (r.disjunctive_sources_for_seq?.length) {
+      html += '<div class="result-section"><div class="result-section-title">Disjunctive Sources (Filtered)</div>';
+      r.disjunctive_sources_for_seq.forEach(d => {
+        html += `<div class="rule-item"><div class="rule-head"><span>(${highlightFOL((d.sources||[]).join(' | '))}) via [${highlightFOL((d.ec_sequence||[]).join(', '))}]</span><span class="rule-meta">conf ${d.confidence ?? '-'}</span></div></div>`;
+      });
+      html += '</div>';
+    }
+    if (r.full_result_summary) {
+      html += `<div class="result-section"><div class="result-section-title">Summary</div><div style="font-size:0.85rem;color:var(--muted)">${r.full_result_summary.sufficient_sets_count} sufficient sets &middot; ${r.full_result_summary.disjunctive_sources_count} disjunctive sources &middot; ${r.full_result_summary.necessary_ecs_count} necessary ECs</div></div>`;
+    }
+  }
+
+  if (qt === 'order_matters' || qt === 'order_sensitivity') {
+    const fwdTargets = r.forward?.unique_targets || r.forward_targets || [];
+    const revTargets = r.reverse?.unique_targets || r.reverse_targets || [];
+    const fwdSet = new Set(fwdTargets);
+    const revSet = new Set(revTargets);
+    const fwdOnly = new Set([...fwdSet].filter(t => !revSet.has(t)));
+    const revOnly = new Set([...revSet].filter(t => !fwdSet.has(t)));
+
+    html += '<div class="result-section"><div class="result-section-title">Forward vs Reverse</div>';
+    html += '<div class="order-compare">';
+    html += `<div class="order-panel" style="border-top:3px solid var(--blue)">`;
+    html += `<div class="order-panel-title" style="color:var(--blue)">[${highlightFOL((r.forward?.seq||[]).join(', '))}]</div>`;
+    html += `<div style="font-size:0.82rem;color:var(--muted);margin-bottom:6px">${r.forward?.transitions?.length || r.forward_transition_count || 0} transitions</div>`;
+    if (fwdTargets.length) {
+      html += '<div style="display:flex;flex-wrap:wrap;gap:2px">';
+      fwdTargets.forEach(t => {
+        const isUnique = fwdOnly.has(t);
+        html += `<span class="odor-pill${isUnique ? ' unique' : ''}">${esc(t)}</span>`;
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+    html += `<div class="order-panel" style="border-top:3px solid var(--purple)">`;
+    html += `<div class="order-panel-title" style="color:var(--purple)">[${highlightFOL((r.reverse?.seq||[]).join(', '))}]</div>`;
+    html += `<div style="font-size:0.82rem;color:var(--muted);margin-bottom:6px">${r.reverse?.transitions?.length || r.reverse_transition_count || 0} transitions</div>`;
+    if (revTargets.length) {
+      html += '<div style="display:flex;flex-wrap:wrap;gap:2px">';
+      revTargets.forEach(t => {
+        const isUnique = revOnly.has(t);
+        html += `<span class="odor-pill${isUnique ? ' unique' : ''}">${esc(t)}</span>`;
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+    html += '</div>';
+    if (fwdOnly.size || revOnly.size) {
+      html += `<div style="font-size:0.82rem;color:var(--muted);margin-top:8px">Unique to forward: <strong>${fwdOnly.size}</strong> &middot; Unique to reverse: <strong>${revOnly.size}</strong> (highlighted with border)</div>`;
+    }
+    html += '</div>';
+  }
+
+  if (qt === 'multi_step') {
+    if (r.paths?.length) {
+      html += '<div class="result-section"><div class="result-section-title">Paths Found</div>';
+      html += truncatedList(r.paths, 10, (p, i) => {
+        const chain = p.intermediates?.length ? p.intermediates.map(o => `<span class="odor">${esc(o)}</span>`).join(' &rarr; ') : '(direct)';
+        const ecs = (p.ec_sequences||[]).map(s => `[${s.map(e=>`<span class="ec">${esc(e)}</span>`).join(', ')}]`).join(' &rarr; ');
+        return `<div class="rule-item" onclick="toggleRuleItem(this)">
+          <div class="rule-head"><span>${p.total_steps} step(s): ${chain}</span></div>
+          <div class="rule-detail" style="padding-top:8px"><div style="font-size:0.82rem">EC sequences: ${ecs}</div></div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+    if (r.compatibility_checks?.length) {
+      html += '<div class="result-section"><div class="result-section-title">Compatibility Warnings</div>';
+      r.compatibility_checks.forEach(c => {
+        html += `<div style="font-size:0.85rem;color:var(--red);margin-bottom:4px">${highlightFOL(c.ec1)} and ${highlightFOL(c.ec2)} are incompatible</div>`;
+      });
+      html += '</div>';
+    }
+  }
+
+  if (qt === 'counterfactual') {
+    const origPaths = r.original_paths ?? 0;
+    const survCount = r.surviving_count ?? (r.surviving_paths?.length ?? 0);
+    const blocked = r.blocked_paths ?? 0;
+    const redPct = r.reduction_pct ?? (origPaths ? Math.round(blocked / origPaths * 100) : 0);
+    html += '<div class="result-section"><div class="result-section-title">Impact</div>';
+    html += '<div class="cf-before-after">';
+    html += `<span class="cf-stat" style="color:var(--blue)">${origPaths} paths</span>`;
+    html += `<span class="cf-arrow">&rarr;</span>`;
+    html += `<span class="cf-stat" style="color:${survCount > 0 ? 'var(--green)' : 'var(--red)'}">${survCount} surviving</span>`;
+    html += `<span style="color:var(--muted);font-size:0.88rem">(${redPct}% reduction)</span>`;
+    html += '</div>';
+    html += `<div style="margin-bottom:10px"><div class="progress-bar-track" style="max-width:300px"><div class="progress-bar-fill ${redPct >= 100 ? 'hard' : 'soft'}" style="width:${redPct}%"></div></div></div>`;
+    if (r.alternative_ecs?.length) {
+      html += `<div style="margin-top:8px;font-size:0.85rem">Alternative ECs: ${r.alternative_ecs.map(e=>`<span class="ec-pill">${esc(e)}</span>`).join(' ')}</div>`;
+    }
+    html += '</div>';
+    if (r.surviving_paths?.length) {
+      html += '<div class="result-section"><div class="result-section-title">Surviving Pathways</div><div class="pathway-list">';
+      html += truncatedList(r.surviving_paths, 10, (s) => {
+        return `<div class="pathway-entry">${esc(s.pathway_id)}: [${(s.ec_sequence||[]).join(', ')}] w=${s.weight}</div>`;
+      });
+      html += '</div></div>';
+    }
+  }
+
+  // Fallback: if no specific rendering matched, show raw JSON
+  if (!html) {
+    html = `<div class="result-section"><pre style="font-size:0.8rem;color:var(--muted);white-space:pre-wrap;max-height:400px;overflow:auto">${esc(JSON.stringify(r,null,2))}</pre></div>`;
+  }
+
+  return html;
+}
+
+
+/* ----------------------------------------------------------------
+   Tier 2 & 3: Dynamic param building (static version)
+   ---------------------------------------------------------------- */
+
+function buildParamFields(containerId, schema, queryType, tier) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  if (!schema) return;
+
+  schema.forEach(p => {
+    const field = document.createElement('div');
+    field.className = 'field';
+
+    const label = document.createElement('label');
+    label.textContent = p.key + (p.optional ? ' (optional)' : '');
+    field.appendChild(label);
+
+    if (p.type === 'select') {
+      const sel = document.createElement('select');
+      sel.id = `${tier}_${p.key}`;
+
+      // Determine options: odor selects vs EC selects
+      const isEcField = p.key.startsWith('ec') || p.key === 'remove_ec';
+      const options = isEcField ? ALL_ECS : ODORS;
+
+      if (p.optional) {
+        sel.innerHTML = '<option value="">(any)</option>';
+      } else {
+        sel.innerHTML = '<option value="">-- select --</option>';
+      }
+      options.forEach(v => {
+        const opt = document.createElement('option');
+        opt.value = v;
+        opt.textContent = v;
+        sel.appendChild(opt);
+      });
+
+      field.appendChild(sel);
+    } else if (p.type === 'number') {
+      const inp = document.createElement('input');
+      inp.type = 'number';
+      inp.id = `${tier}_${p.key}`;
+      inp.value = p.default ?? '';
+      inp.min = 1;
+      inp.max = 5;
+      field.appendChild(inp);
+    } else {
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.id = `${tier}_${p.key}`;
+      inp.placeholder = p.placeholder || '';
+      field.appendChild(inp);
+    }
+
+    container.appendChild(field);
+  });
+}
+
+function gatherParams(schema, tier) {
+  const params = {};
+  schema.forEach(p => {
+    const el = document.getElementById(`${tier}_${p.key}`);
+    if (el) params[p.key] = el.value;
+  });
+  return params;
+}
+
+/* ----------------------------------------------------------------
+   Tier 2: Direct query wiring
+   ---------------------------------------------------------------- */
+
+document.getElementById('directQueryType').addEventListener('change', function() {
+  const qt = this.value;
+  const btn = document.getElementById('directQueryBtn');
+  document.getElementById('directResult').classList.add('hidden');
+  hideError('directError');
+  if (!qt) {
+    document.getElementById('directParams').innerHTML = '';
+    btn.disabled = true;
+    return;
+  }
+  btn.disabled = !DATA_READY;
+  if (DATA_READY) {
+    buildParamFields('directParams', DIRECT_PARAMS[qt], qt, 'dq');
+  }
+});
+
+document.getElementById('directQueryBtn').addEventListener('click', function() {
+  const qt = document.getElementById('directQueryType').value;
+  if (!qt || !DATA_READY) return;
+  const schema = DIRECT_PARAMS[qt];
+  const params = gatherParams(schema, 'dq');
+
+  hideError('directError');
+  document.getElementById('directResult').classList.add('hidden');
+
+  try {
+    const result = runQuery(qt, params);
+    const box = document.getElementById('directResult');
+    box.innerHTML = renderResultContent(result, qt);
+    box.classList.remove('hidden');
+  } catch(e) {
+    showError('directError', e.message);
+  }
+});
+
+/* ----------------------------------------------------------------
+   Tier 3: Reasoning query wiring
+   ---------------------------------------------------------------- */
+
+document.getElementById('reasonQueryType').addEventListener('change', function() {
+  const qt = this.value;
+  const btn = document.getElementById('reasonQueryBtn');
+  document.getElementById('reasonResult').classList.add('hidden');
+  hideError('reasonError');
+  if (!qt) {
+    document.getElementById('reasonParams').innerHTML = '';
+    btn.disabled = true;
+    return;
+  }
+  btn.disabled = !DATA_READY;
+  if (DATA_READY) {
+    buildParamFields('reasonParams', REASON_PARAMS[qt], qt, 'rq');
+  }
+});
+
+document.getElementById('reasonQueryBtn').addEventListener('click', function() {
+  const qt = document.getElementById('reasonQueryType').value;
+  if (!qt || !DATA_READY) return;
+  const schema = REASON_PARAMS[qt];
+  const params = gatherParams(schema, 'rq');
+
+  hideError('reasonError');
+  document.getElementById('reasonResult').classList.add('hidden');
+
+  try {
+    const result = runQuery(qt, params);
+    const box = document.getElementById('reasonResult');
+    box.innerHTML = renderReasoningResult(result, qt);
+    box.classList.remove('hidden');
+  } catch(e) {
+    showError('reasonError', e.message);
+  }
+});
+
+/** Render reasoning results with step chains where applicable */
+function renderReasoningResult(result, qt) {
+  let html = '';
+
+  const badge = determineBadge(result, qt);
+  if (badge) {
+    html += `<div class="result-header">${badge.html} <span style="color:var(--muted);font-weight:400;font-size:0.88rem">${esc(badge.text)}</span></div>`;
+  }
+
+  // For multi_step, show as reasoning chain
+  if (qt === 'multi_step' && result.paths?.length) {
+    html += '<div class="result-section"><div class="result-section-title">Reasoning Chain</div><div class="reasoning-chain">';
+    result.paths.slice(0,10).forEach((p,pi) => {
+      const steps = p.ec_sequences || [];
+      const intermediates = ['source', ...(p.intermediates || []), 'target'];
+      html += `<div class="reasoning-step" data-step="${pi+1}">`;
+      html += `<div style="font-weight:600;margin-bottom:6px">Path #${pi+1} (${p.total_steps} step${p.total_steps!==1?'s':''})</div>`;
+      steps.forEach((seq,si) => {
+        const fromOdor = intermediates[si] || '?';
+        const toOdor = intermediates[si+1] || '?';
+        html += `<div style="font-size:0.85rem;margin-bottom:4px">Step ${si+1}: <span class="odor">${esc(fromOdor)}</span> &xrarr; <span class="odor">${esc(toOdor)}</span> via [${seq.map(e=>`<span class="ec">${esc(e)}</span>`).join(', ')}]</div>`;
+      });
+      html += '</div>';
+    });
+    html += '</div></div>';
+    if (result.compatibility_checks?.length) {
+      html += '<div class="result-section"><div class="result-section-title">Compatibility Warnings</div>';
+      result.compatibility_checks.forEach(c => {
+        html += `<div style="font-size:0.85rem;color:var(--red);margin-bottom:4px">${highlightFOL(c.ec1)} and ${highlightFOL(c.ec2)} are incompatible in path through ${(c.path||[]).join(', ')}</div>`;
+      });
+      html += '</div>';
+    }
+    return html;
+  }
+
+  // For counterfactual, show as reasoning chain with before/after
+  if (qt === 'counterfactual') {
+    const origPaths = result.original_paths ?? 0;
+    const survCount = result.surviving_count ?? (result.surviving_paths?.length ?? 0);
+    const blocked = result.blocked_paths ?? 0;
+    const redPct = result.reduction_pct ?? (origPaths ? Math.round(blocked / origPaths * 100) : 0);
+
+    html += '<div class="result-section">';
+    html += '<div class="cf-before-after">';
+    html += `<span class="cf-stat" style="color:var(--blue)">${origPaths} paths</span>`;
+    html += `<span class="cf-arrow">&rarr;</span>`;
+    html += `<span class="cf-stat" style="color:${survCount > 0 ? 'var(--green)' : 'var(--red)'}">${survCount} surviving</span>`;
+    html += `<span style="color:var(--muted);font-size:0.88rem">(${redPct}% reduction)</span>`;
+    html += '</div>';
+    html += `<div style="margin-bottom:10px"><div class="progress-bar-track" style="max-width:300px"><div class="progress-bar-fill ${redPct >= 100 ? 'hard' : 'soft'}" style="width:${redPct}%"></div></div></div>`;
+    html += '</div>';
+
+    html += '<div class="result-section"><div class="result-section-title">Reasoning Chain</div><div class="reasoning-chain">';
+    html += `<div class="reasoning-step" data-step="1"><div style="font-weight:600;margin-bottom:4px">Baseline</div><div style="font-size:0.85rem">${origPaths} original pathways found</div></div>`;
+    html += `<div class="reasoning-step" data-step="2"><div style="font-weight:600;margin-bottom:4px">Remove Enzyme</div><div style="font-size:0.85rem">${blocked} pathways blocked by removing the enzyme</div></div>`;
+    html += `<div class="reasoning-step" data-step="3"><div style="font-weight:600;margin-bottom:4px">Conclusion</div><div style="font-size:0.85rem">${result.still_reachable ? `Still reachable via ${survCount} surviving pathway(s)` : 'Target becomes unreachable'}</div>`;
+    if (result.alternative_ecs?.length) {
+      html += `<div style="font-size:0.82rem;margin-top:4px;color:var(--muted)">Alternative ECs: ${result.alternative_ecs.map(e=>`<span class="ec-pill">${esc(e)}</span>`).join(' ')}</div>`;
+    }
+    html += '</div></div></div>';
+    return html;
+  }
+
+  // Default: use standard rendering
+  html += renderResultBody(result, qt);
+  return html;
+}
+
+/* ----------------------------------------------------------------
+   Default Queries on Load
+   ---------------------------------------------------------------- */
+
+function loadDefaultQueries() {
+  // Tier 2: must_via citrus -> floral
+  try {
+    const dqType = document.getElementById('directQueryType');
+    dqType.value = 'must_via';
+    dqType.dispatchEvent(new Event('change'));
+
+    setTimeout(() => {
+      const srcSel = document.getElementById('dq_source');
+      if (srcSel) { srcSel.value = 'citrus'; }
+      const tgtSel = document.getElementById('dq_target');
+      if (tgtSel) { tgtSel.value = 'floral'; }
+      document.getElementById('directQueryBtn').click();
+    }, 100);
+  } catch(e) { console.warn('Default direct query failed', e); }
+
+  // Tier 3: counterfactual -- citrus -> floral, remove 4.2.3
+  try {
+    const rqType = document.getElementById('reasonQueryType');
+    rqType.value = 'counterfactual';
+    rqType.dispatchEvent(new Event('change'));
+
+    setTimeout(() => {
+      const srcSel = document.getElementById('rq_source');
+      if (srcSel) { srcSel.value = 'citrus'; }
+      const tgtSel = document.getElementById('rq_target');
+      if (tgtSel) { tgtSel.value = 'floral'; }
+      const ecInput = document.getElementById('rq_remove_ec');
+      if (ecInput) { ecInput.value = '4.2.3'; }
+      document.getElementById('reasonQueryBtn').click();
+    }, 100);
+  } catch(e) { console.warn('Default reason query failed', e); }
+}
+
+
+/* ================================================================
+   Visualizations: Dashboard
+   ================================================================ */
+
+const WONG = ['#E69F00','#56B4E9','#009E73','#F0E442','#0072B2','#D55E00','#CC79A7','#999999'];
+
+let vizData = null;
+
+function renderDashboard() {
+  vizData = VIZ_DATA;
+  renderEcDonut();
+  renderAsymmetry();
+  renderLengths();
+  renderRuleTypes();
+  if (vizData.descriptor_stats) {
+    const ds = vizData.descriptor_stats;
+    document.getElementById('statDescNote').textContent =
+      `(${ds.in_trajectories} of ${ds.total_vocabulary} descriptors appear in trajectories)`;
+  }
+}
+
+/* ----------------------------------------------------------------
+   Dashboard Charts
+   ---------------------------------------------------------------- */
+
+function renderEcDonut() {
+  if (!vizData || !vizData.ec_classes?.length) return;
+  const data = vizData.ec_classes;
+  const total = d3.sum(data, d => d.count);
+  const W = 280, H = 280, R = 110, r = 60;
+  const container = document.getElementById('chartEcClass');
+  container.innerHTML = '';
+
+  const abbrevNames = {'Oxidoreductase':'Oxidored.','Transferase':'Transfer.','Hydrolase':'Hydrol.','Lyase':'Lyase','Isomerase':'Isomer.','Ligase':'Ligase'};
+
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', [0, 0, W + 160, H])
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  const g = svg.append('g').attr('transform', `translate(${W/2},${H/2})`);
+
+  const pie = d3.pie().value(d => d.count).sort(null);
+  const arc = d3.arc().innerRadius(r).outerRadius(R);
+  const arcs = pie(data);
+
+  g.selectAll('path').data(arcs).join('path')
+    .attr('d', arc)
+    .attr('fill', (d, i) => WONG[i % WONG.length])
+    .attr('stroke', '#1e293b')
+    .attr('stroke-width', 2);
+
+  g.append('text').attr('text-anchor','middle').attr('dy','-0.2em')
+    .attr('fill','#e2e8f0').attr('font-size','1.4rem').attr('font-weight','700')
+    .text(total.toLocaleString());
+  g.append('text').attr('text-anchor','middle').attr('dy','1.2em')
+    .attr('fill','#94a3b8').attr('font-size','0.7rem').text('annotations');
+
+  const leg = svg.append('g').attr('transform', `translate(${W + 10}, ${H/2 - data.length * 11})`);
+  data.forEach((d, i) => {
+    const pct = ((d.count / total) * 100).toFixed(1);
+    const shortName = abbrevNames[d.name] || d.name;
+    const row = leg.append('g').attr('transform', `translate(0, ${i * 22})`);
+    row.append('rect').attr('width',12).attr('height',12).attr('rx',2)
+      .attr('fill', WONG[i % WONG.length]);
+    row.append('text').attr('x',16).attr('y',10).attr('fill','#e2e8f0')
+      .attr('font-size','0.72rem').text(`${shortName} (${pct}%)`);
+  });
+}
+
+function renderAsymmetry() {
+  if (!vizData || !vizData.asymmetry?.length) return;
+  const data = vizData.asymmetry;
+  const container = document.getElementById('chartAsymmetry');
+  container.innerHTML = '';
+
+  const margin = {top: 10, right: 10, bottom: 20, left: 0};
+  const W = 520, barH = 16, gap = 5;
+  const H = margin.top + margin.bottom + data.length * (barH + gap);
+  const mid = W / 2;
+
+  const maxVal = Math.max(...data.map(d => Math.max(d.source, d.target)));
+  const labelW = 70;
+  const xScale = d3.scaleLinear().domain([0, maxVal]).range([0, mid - labelW/2 - 10]);
+
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', [0, 0, W, H])
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  const g = svg.append('g').attr('transform', `translate(0,${margin.top})`);
+
+  data.forEach((d, i) => {
+    const y = i * (barH + gap);
+    const leftEnd = mid - labelW/2;
+    const rightStart = mid + labelW/2;
+    g.append('rect')
+      .attr('x', leftEnd - xScale(d.source)).attr('y', y)
+      .attr('width', xScale(d.source)).attr('height', barH)
+      .attr('fill', '#0072B2').attr('rx', 2);
+    g.append('text').attr('x', leftEnd - xScale(d.source) - 4).attr('y', y + barH/2 + 4)
+      .attr('fill','#94a3b8').attr('font-size','0.55rem').attr('text-anchor','end').text(d.source);
+    g.append('rect')
+      .attr('x', rightStart).attr('y', y)
+      .attr('width', xScale(d.target)).attr('height', barH)
+      .attr('fill', '#E69F00').attr('rx', 2);
+    g.append('text').attr('x', rightStart + xScale(d.target) + 4).attr('y', y + barH/2 + 4)
+      .attr('fill','#94a3b8').attr('font-size','0.55rem').text(d.target);
+    g.append('text').attr('x', mid).attr('y', y + barH/2 + 4)
+      .attr('text-anchor','middle').attr('fill','#e2e8f0')
+      .attr('font-size','0.6rem').attr('font-weight','600').text(d.odor);
+  });
+
+  const ly = H - 14;
+  g.append('rect').attr('x', mid - 120).attr('y', ly).attr('width',10).attr('height',10).attr('fill','#0072B2').attr('rx',2);
+  g.append('text').attr('x', mid - 106).attr('y', ly + 9).attr('fill','#94a3b8').attr('font-size','0.65rem').text('Source');
+  g.append('rect').attr('x', mid + 10).attr('y', ly).attr('width',10).attr('height',10).attr('fill','#E69F00').attr('rx',2);
+  g.append('text').attr('x', mid + 24).attr('y', ly + 9).attr('fill','#94a3b8').attr('font-size','0.65rem').text('Target');
+}
+
+function renderLengths() {
+  if (!vizData || !vizData.lengths?.length) return;
+  const data = vizData.lengths;
+  const container = document.getElementById('chartLengths');
+  container.innerHTML = '';
+
+  const margin = {top: 20, right: 20, bottom: 40, left: 60};
+  const W = 400, H = 260;
+  const iW = W - margin.left - margin.right;
+  const iH = H - margin.top - margin.bottom;
+
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', [0, 0, W, H])
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  const x = d3.scalePoint().domain(data.map(d => d.length)).range([0, iW]).padding(0.5);
+  const y = d3.scaleLinear().domain([0, d3.max(data, d => d.count)]).nice().range([iH, 0]);
+
+  g.append('g').attr('transform', `translate(0,${iH})`)
+    .call(d3.axisBottom(x).tickFormat(d => d + ' steps'))
+    .selectAll('text').attr('fill','#94a3b8').attr('font-size','0.7rem');
+  g.selectAll('.domain, .tick line').attr('stroke','#334155');
+
+  g.append('g').call(d3.axisLeft(y).ticks(5).tickFormat(d3.format(',.0f')))
+    .selectAll('text').attr('fill','#94a3b8').attr('font-size','0.7rem');
+  g.selectAll('.domain, .tick line').attr('stroke','#334155');
+
+  data.forEach((d, i) => {
+    g.append('line')
+      .attr('x1', x(d.length)).attr('x2', x(d.length))
+      .attr('y1', y(d.count)).attr('y2', iH)
+      .attr('stroke', WONG[i % WONG.length]).attr('stroke-width', 2);
+    g.append('circle')
+      .attr('cx', x(d.length)).attr('cy', y(d.count))
+      .attr('r', 6).attr('fill', WONG[i % WONG.length]);
+    g.append('text')
+      .attr('x', x(d.length)).attr('y', y(d.count) - 10)
+      .attr('text-anchor','middle').attr('fill','#e2e8f0')
+      .attr('font-size','0.7rem').attr('font-weight','600')
+      .text(d.count.toLocaleString());
+  });
+}
+
+function renderRuleTypes() {
+  if (!vizData || !vizData.rule_dist?.length) return;
+  const data = vizData.rule_dist.sort((a,b) => b.count - a.count);
+  const container = document.getElementById('chartRuleTypes');
+  container.innerHTML = '';
+
+  const hardTypes = new Set(['exclusion','hard_exclusion','hard_gate','required_ec','necessary_ec','forbidden']);
+  const softTypes = new Set(['soft_gate','disjunctive_source','sufficient_set','conditional_gate','co_occurrence']);
+
+  const margin = {top: 10, right: 40, bottom: 10, left: 130};
+  const barH = 22, gap = 6;
+  const W = 460;
+  const H = margin.top + margin.bottom + data.length * (barH + gap);
+  const iW = W - margin.left - margin.right;
+
+  const maxVal = d3.max(data, d => d.count);
+  const x = d3.scaleLinear().domain([0, maxVal]).range([0, iW]);
+
+  const svg = d3.select(container).append('svg')
+    .attr('viewBox', [0, 0, W, H])
+    .attr('preserveAspectRatio', 'xMidYMid meet');
+
+  const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+  data.forEach((d, i) => {
+    const y = i * (barH + gap);
+    const isHard = hardTypes.has(d.type);
+    const color = isHard ? '#D55E00' : '#009E73';
+
+    g.append('rect')
+      .attr('x', 0).attr('y', y)
+      .attr('width', x(d.count)).attr('height', barH)
+      .attr('fill', color).attr('rx', 3).attr('opacity', 0.85);
+
+    g.append('text')
+      .attr('x', -6).attr('y', y + barH/2 + 4)
+      .attr('text-anchor','end').attr('fill','#e2e8f0')
+      .attr('font-size','0.72rem')
+      .text(d.type.replace(/_/g, ' '));
+
+    g.append('text')
+      .attr('x', x(d.count) + 4).attr('y', y + barH/2 + 4)
+      .attr('fill','#94a3b8').attr('font-size','0.7rem')
+      .text(d.count);
+  });
+
+  const ly = H - 6;
+  svg.append('rect').attr('x', margin.left).attr('y', ly - 10).attr('width',10).attr('height',10).attr('fill','#D55E00').attr('rx',2);
+  svg.append('text').attr('x', margin.left + 14).attr('y', ly).attr('fill','#94a3b8').attr('font-size','0.65rem').text('Hard rules');
+  svg.append('rect').attr('x', margin.left + 80).attr('y', ly - 10).attr('width',10).attr('height',10).attr('fill','#009E73').attr('rx',2);
+  svg.append('text').attr('x', margin.left + 94).attr('y', ly).attr('fill','#94a3b8').attr('font-size','0.65rem').text('Soft rules');
+}
+
+/* ================================================================
+   Init: Load all data then render
+   ================================================================ */
+loadAllData();
+
+</script>
+</body>
+</html>
